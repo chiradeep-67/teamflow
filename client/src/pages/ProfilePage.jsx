@@ -219,6 +219,14 @@ export default function ProfilePage() {
                 </p>
               </div>
 
+              {user?.systemRole !== 'admin' ? (
+                <div className="py-6 text-center space-y-2">
+                  <Lock size={24} className="text-gray-300 dark:text-gray-700 mx-auto" />
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Password changes are managed by your Admin</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-600">If you need a reset, contact your workspace Admin from the Team page.</p>
+                </div>
+              ) : (<>
+
               <p className="text-sm font-semibold text-gray-900 dark:text-white">Change password</p>
 
               {pwError && (
@@ -253,9 +261,10 @@ export default function ProfilePage() {
 
               <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
                 <p className="text-xs text-gray-400 dark:text-gray-600">
-                  Forgot your password? Contact your workspace Admin to have it reset.
+                  Only admins can self-change their password. Member passwords are reset by the Admin from the Team page.
                 </p>
               </div>
+              </>)}
             </div>
           )}
 
