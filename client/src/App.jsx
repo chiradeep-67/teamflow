@@ -5,20 +5,26 @@ import { AppSidebar } from './components/layout/AppSidebar';
 import LandingPage       from './pages/LandingPage';
 import LoginPage         from './pages/LoginPage';
 import RegisterPage      from './pages/RegisterPage';
+import OnboardingPage    from './pages/OnboardingPage';
 import DashboardPage     from './pages/DashboardPage';
 import ProjectsPage      from './pages/ProjectsPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 import ProfilePage       from './pages/ProfilePage';
+import TeamPage          from './pages/TeamPage';
 import { ROUTES }        from './utils/constants';
 
 /* ─── Route guards ─── */
 function ProtectedLayout() {
-  const { user } = useAuth();
+  const { user, workspace, workspaceLoaded } = useAuth();
   if (!user) return <Navigate to={ROUTES.LOGIN} replace />;
+  /* Any authenticated user without a workspace → onboarding
+     (covers the case where onboarding was skipped or workspace was deleted) */
+  if (workspaceLoaded && !workspace) {
+    return <Navigate to="/onboarding" replace />;
+  }
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-950 overflow-hidden">
       <AppSidebar />
-      {/* push content down on mobile because of top bar */}
       <main className="flex-1 overflow-y-auto pt-14 lg:pt-0">
         <Outlet />
       </main>
@@ -29,6 +35,12 @@ function ProtectedLayout() {
 function PublicRoute({ children }) {
   const { user } = useAuth();
   if (user) return <Navigate to={ROUTES.DASHBOARD} replace />;
+  return children;
+}
+
+function RequireAuth({ children }) {
+  const { user } = useAuth();
+  if (!user) return <Navigate to={ROUTES.LOGIN} replace />;
   return children;
 }
 
@@ -58,13 +70,21 @@ export default function App() {
               <Route path={ROUTES.LOGIN}    element={<PublicRoute><LoginPage /></PublicRoute>} />
               <Route path={ROUTES.REGISTER} element={<PublicRoute><RegisterPage /></PublicRoute>} />
 
+              {/* Onboarding — auth required, no sidebar */}
+              <Route
+                path="/onboarding"
+                element={
+                  <RequireAuth><OnboardingPage /></RequireAuth>
+                }
+              />
+
               {/* Protected — all share the sidebar layout */}
               <Route element={<ProtectedLayout />}>
                 <Route path={ROUTES.DASHBOARD} element={<DashboardPage />} />
                 <Route path={ROUTES.PROJECTS}  element={<ProjectsPage />} />
                 <Route path="/projects/:id"    element={<ProjectDetailPage />} />
                 <Route path={ROUTES.BOARD}     element={<ComingSoon title="Workspace Board" />} />
-                <Route path={ROUTES.TEAM}      element={<ComingSoon title="Team Management" />} />
+                <Route path={ROUTES.TEAM}      element={<TeamPage />} />
                 <Route path={ROUTES.REPORTS}   element={<ComingSoon title="Reports & Analytics" />} />
                 <Route path={ROUTES.SETTINGS}  element={<ComingSoon title="Workspace Settings" />} />
                 <Route path={ROUTES.PROFILE}   element={<ProfilePage />} />

@@ -1,93 +1,138 @@
-import { createContext, useContext, useState } from 'react';
-import { MOCK_USERS, MOCK_PROJECTS } from '../data/mockData';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { authAPI, projectsAPI, workspaceAPI } from '../services/api';
 
 const AuthContext = createContext(null);
 
+const TOKEN_KEY = 'tf_token';
+const USER_KEY  = 'tf_user';
+
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [user, setUser]       = useState(() => {
+    try { return JSON.parse(localStorage.getItem(USER_KEY)) || null; }
+    catch { return null; }
+  });
+  const [workspace, setWorkspace] = useState(null);
+  const [workspaceLoaded, setWorkspaceLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  /**
-   * Simulate login — in production this calls POST /api/auth/login
-   * and receives a JWT.
-   */
+  /* On mount: verify stored token + load workspace */
+  useEffect(() => {
+    const token = localStorage.getItem(TOKEN_KEY);
+
+    const loadWorkspace = () =>
+      workspaceAPI.get()
+        .then(res => setWorkspace(res.data.workspace))
+        .catch(() => setWorkspace(null))
+        .finally(() => setWorkspaceLoaded(true));
+
+    if (!token) { setWorkspaceLoaded(true); return; }
+
+    if (!user) {
+      authAPI.me()
+        .then(res => { setUser(res.data.user); return loadWorkspace(); })
+        .catch(() => {
+          localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem(USER_KEY);
+          setUser(null);
+          setWorkspaceLoaded(true);
+        });
+    } else {
+      loadWorkspace();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const _persist = (token, userData) => {
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(USER_KEY, JSON.stringify(userData));
+    setUser(userData);
+    /* Reload workspace after login */
+    workspaceAPI.get()
+      .then(res => setWorkspace(res.data.workspace))
+      .catch(() => setWorkspace(null));
+  };
+
+  /* ─── Login ─── */
   const login = async ({ email, password }) => {
     setIsLoading(true);
-    await new Promise(r => setTimeout(r, 800));
-    setIsLoading(false);
-
-    const found = MOCK_USERS.find(
-      u => u.email.toLowerCase() === email.toLowerCase()
-    );
-    if (!found) return { success: false, error: 'No account found with that email.' };
-
-    // In production: verify hashed password. Here we accept anything for demo.
-    setUser(found);
-    return { success: true };
+    try {
+      const { data } = await authAPI.login({ email, password });
+      _persist(data.token, data.user);
+      return { success: true };
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Login failed. Please try again.';
+      return { success: false, error: msg };
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  /** Quick demo login — lets you jump in as any role instantly */
-  const demoLogin = (userId) => {
-    const found = MOCK_USERS.find(u => u.id === userId);
-    if (found) setUser(found);
-  };
-
-  const register = async ({ name, email, role }) => {
+  /* ─── Register ─── */
+  const register = async ({ name, email, password, phone, companyName, inviteToken }) => {
     setIsLoading(true);
-    await new Promise(r => setTimeout(r, 800));
-    setIsLoading(false);
-
-    const newUser = {
-      id: `u${Date.now()}`,
-      name,
-      email,
-      systemRole: role ?? 'member',
-      avatar: name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
-      department: 'Engineering',
-      title: 'Team Member',
-      joinedAt: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-      bio: '',
-    };
-    setUser(newUser);
-    return { success: true };
+    try {
+      const payload = { name, email, password };
+      if (phone)       payload.phone       = phone;
+      if (companyName) payload.companyName = companyName;
+      if (inviteToken) payload.inviteToken = inviteToken;
+      const { data } = await authAPI.register(payload);
+      _persist(data.token, data.user);
+      /* Store company name so onboarding can pre-fill workspace name */
+      if (data.companyName) localStorage.setItem('tf_company', data.companyName);
+      return { success: true, user: data.user };
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Registration failed. Please try again.';
+      return { success: false, error: msg };
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const logout = () => setUser(null);
-
-  /**
-   * Get all projects the current user has access to.
-   * Admin → all projects. Others → only projects they're members of.
-   */
-  const getAccessibleProjects = () => {
-    if (!user) return [];
-    if (user.systemRole === 'admin') return MOCK_PROJECTS;
-    return MOCK_PROJECTS.filter(p =>
-      p.members.some(m => m.userId === user.id)
-    );
+  /* ─── Logout ─── */
+  const logout = () => {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    setUser(null);
+    setWorkspace(null);
   };
 
-  /**
-   * Get the user's role within a specific project.
-   * Admin always gets 'admin'. Non-members get null.
-   */
-  const getProjectRole = (projectId) => {
+  /* ─── Project helpers (API-backed) ─── */
+  const getAccessibleProjects = useCallback(async () => {
+    try {
+      const { data } = await projectsAPI.getAll();
+      return data.projects || [];
+    } catch {
+      return [];
+    }
+  }, []);
+
+  /* Get the current user's role within a specific project */
+  const getProjectRole = useCallback((project) => {
     if (!user) return null;
-    if (user.systemRole === 'admin') return 'admin';
-    const project = MOCK_PROJECTS.find(p => p.id === projectId);
-    return project?.members.find(m => m.userId === user.id)?.projectRole ?? null;
-  };
+    /* Owner and Admin have full access to every project */
+    if (['owner', 'admin'].includes(user.systemRole)) return 'admin';
+    if (!project?.members) return null;
+    const member = project.members.find(
+      m => (m.user?._id || m.user) === user.id
+    );
+    return member?.projectRole ?? null;
+  }, [user]);
+
+  const isOwnerOrAdmin = ['owner', 'admin'].includes(user?.systemRole);
 
   return (
     <AuthContext.Provider value={{
       user,
+      workspace,
+      setWorkspace,
+      workspaceLoaded,
+      isOwnerOrAdmin,
       isLoading,
       login,
-      demoLogin,
       register,
       logout,
       getAccessibleProjects,
       getProjectRole,
-      allUsers: MOCK_USERS,
     }}>
       {children}
     </AuthContext.Provider>

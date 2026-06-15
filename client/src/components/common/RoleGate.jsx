@@ -14,8 +14,8 @@ export function RoleGate({ roles, children, fallback = null }) {
   const { user } = useAuth();
   if (!user) return fallback;
 
-  // Admin always passes
-  if (user.systemRole === ROLES.ADMIN) return children;
+  // Owner and Admin always pass every gate
+  if (user.systemRole === ROLES.OWNER || user.systemRole === ROLES.ADMIN) return children;
 
   if (!roles || roles.includes(user.systemRole)) return children;
   return fallback;
@@ -33,9 +33,11 @@ export function RoleGate({ roles, children, fallback = null }) {
 export function ProjectRoleGate({ project, roles, children, fallback = null }) {
   const { user } = useAuth();
   if (!user) return fallback;
-  if (user.systemRole === ROLES.ADMIN) return children;
+  if (user.systemRole === ROLES.OWNER || user.systemRole === ROLES.ADMIN) return children;
 
-  const membership = project?.members?.find(m => m.userId === user.id);
+  const membership = project?.members?.find(
+    m => (m.user?._id || m.user) === user.id || m.userId === user.id
+  );
   if (!membership) return fallback;
   if (!roles || roles.includes(membership.projectRole)) return children;
   return fallback;

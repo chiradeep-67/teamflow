@@ -22,10 +22,13 @@ const AVATAR_COLORS = {
 
 function UserAvatar({ user, size = 'md' }) {
   const sz = size === 'sm' ? 'w-7 h-7 text-xs' : 'w-8 h-8 text-sm';
-  const gradient = AVATAR_COLORS[user?.avatar] ?? 'from-indigo-500 to-violet-600';
+  const initials = user?.avatar
+    || user?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    || '?';
+  const gradient = AVATAR_COLORS[initials] ?? 'from-indigo-500 to-violet-600';
   return (
     <div className={cn('rounded-full flex items-center justify-center font-semibold text-white bg-gradient-to-br ring-2 ring-white/10', sz, gradient)}>
-      {user?.avatar ?? '?'}
+      {initials}
     </div>
   );
 }
@@ -34,9 +37,9 @@ const NAV_ITEMS = [
   { label: 'Dashboard',  icon: LayoutDashboard, href: ROUTES.DASHBOARD, roles: null },
   { label: 'Projects',   icon: FolderKanban,    href: ROUTES.PROJECTS,  roles: null },
   { label: 'Board',      icon: LayoutGrid,       href: ROUTES.BOARD,    roles: null },
-  { label: 'Team',       icon: Users,            href: ROUTES.TEAM,     roles: ['admin', 'project_manager'] },
-  { label: 'Reports',    icon: BarChart3,        href: ROUTES.REPORTS,  roles: ['admin', 'project_manager', 'team_lead'] },
-  { label: 'Settings',   icon: Settings,         href: ROUTES.SETTINGS, roles: ['admin'] },
+  { label: 'Team',       icon: Users,            href: ROUTES.TEAM,     roles: ['owner', 'admin', 'project_manager'] },
+  { label: 'Reports',    icon: BarChart3,        href: ROUTES.REPORTS,  roles: ['owner', 'admin', 'project_manager', 'team_lead'] },
+  { label: 'Settings',   icon: Settings,         href: ROUTES.SETTINGS, roles: ['owner', 'admin'] },
 ];
 
 function NavItem({ item, collapsed }) {
@@ -96,7 +99,7 @@ export function AppSidebar() {
             <p className="text-sm font-bold text-gray-900 dark:text-white tracking-tight leading-none">
               Team<span className="text-indigo-600 dark:text-indigo-400">Flow</span>
             </p>
-            <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-0.5 truncate">Venpep Solutions</p>
+            <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-0.5 truncate">Task Management</p>
           </div>
         )}
         <button

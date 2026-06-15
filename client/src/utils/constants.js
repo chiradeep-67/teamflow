@@ -1,5 +1,5 @@
 export const APP_NAME = 'TeamFlow';
-export const COMPANY   = 'Venpep Solutions';
+export const COMPANY   = 'TeamFlow';
 
 export const ROUTES = {
   HOME:      '/',

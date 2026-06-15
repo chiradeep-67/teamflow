@@ -7,6 +7,14 @@ const connectDB = require('./config/db');
 dotenv.config();
 connectDB();
 
+// Pre-load models so Mongoose registers them before any route handler fires
+require('./models/Organization');
+require('./models/User');
+require('./models/Workspace');
+require('./models/Project');
+require('./models/Task');
+require('./models/Invitation');
+
 const app = express();
 
 /* ─── Middleware ─── */
@@ -15,10 +23,11 @@ app.use(express.json());
 app.use(morgan('dev'));
 
 /* ─── Routes ─── */
-app.use('/api/auth',     require('./routes/authRoutes'));
-app.use('/api/users',    require('./routes/userRoutes'));
-app.use('/api/projects', require('./routes/projectRoutes'));
-app.use('/api/tasks',    require('./routes/taskRoutes'));
+app.use('/api/auth',      require('./routes/authRoutes'));
+app.use('/api/users',     require('./routes/userRoutes'));
+app.use('/api/projects',  require('./routes/projectRoutes')); /* tasks nested inside: /api/projects/:id/tasks */
+app.use('/api/workspace', require('./routes/workspaceRoutes'));
+app.use('/api/invites',   require('./routes/inviteRoutes'));
 
 /* ─── Health check ─── */
 app.get('/api/health', (req, res) => res.json({ status: 'ok', app: 'TeamFlow API' }));

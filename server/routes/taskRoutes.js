@@ -6,45 +6,51 @@ const Task = require('../models/Task');
 
 router.use(protect);
 
-// GET /api/projects/:id/tasks — all project members can view
+/* ── GET /api/projects/:id/tasks ─────────────────────────────────────────── */
 router.get('/', requireProjectMember, async (req, res) => {
   try {
-    const tasks = await Task.find({ project: req.params.id })
+    const tasks = await Task.find({
+      project:        req.params.id,
+      organizationId: req.user.organizationId,
+    })
       .populate('assignedTo', 'name avatar')
-      .populate('createdBy', 'name avatar');
+      .populate('createdBy',  'name avatar');
     res.json({ success: true, tasks });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// POST /api/projects/:id/tasks — PM, TL, Admin only
+/* ── POST /api/projects/:id/tasks — PM or TL ─────────────────────────────── */
 router.post('/', requireProjectRole('project_manager', 'team_lead'), async (req, res) => {
   try {
-    const task = await Task.create({ ...req.body, project: req.params.id, createdBy: req.user._id });
+    const task = await Task.create({
+      ...req.body,
+      project:        req.params.id,
+      organizationId: req.user.organizationId,
+      createdBy:      req.user._id,
+    });
     res.status(201).json({ success: true, task });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// PUT /api/projects/:id/tasks/:taskId — PM/TL can edit any; Member can only edit their own
+/* ── PUT /api/projects/:id/tasks/:taskId ────────────────────────────────────
+ * PM / TL can edit any task.  Member can only edit their own assigned task. */
 router.put('/:taskId', requireProjectMember, async (req, res) => {
   try {
-    const task = await Task.findById(req.params.taskId);
+    const task = await Task.findOne({
+      _id:            req.params.taskId,
+      organizationId: req.user.organizationId,
+    });
     if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
 
-    const isMember = req.projectRole === 'member';
-    const isAssigned = task.assignedTo?.toString() === req.user._id.toString();
-
-    // Members can only update their own assigned tasks
-    if (isMember && !isAssigned) {
-      return res.status(403).json({ success: false, message: 'Members can only update their own tasks' });
-    }
-
-    // Clients cannot update anything
-    if (req.projectRole === 'client') {
-      return res.status(403).json({ success: false, message: 'Clients have read-only access' });
+    if (req.projectRole === 'member') {
+      const isAssigned = task.assignedTo?.toString() === req.user._id.toString();
+      if (!isAssigned) {
+        return res.status(403).json({ success: false, message: 'Members can only update their own tasks' });
+      }
     }
 
     const updated = await Task.findByIdAndUpdate(req.params.taskId, req.body, { new: true });
@@ -54,13 +60,15 @@ router.put('/:taskId', requireProjectMember, async (req, res) => {
   }
 });
 
-// POST /api/projects/:id/tasks/:taskId/comments
+/* ── POST /api/projects/:id/tasks/:taskId/comments ───────────────────────── */
 router.post('/:taskId/comments', requireProjectMember, async (req, res) => {
   try {
-    if (req.projectRole === 'client') {
-      return res.status(403).json({ success: false, message: 'Clients cannot add comments' });
-    }
-    const task = await Task.findById(req.params.taskId);
+    const task = await Task.findOne({
+      _id:            req.params.taskId,
+      organizationId: req.user.organizationId,
+    });
+    if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
+
     task.comments.push({ author: req.user._id, text: req.body.text });
     await task.save();
     res.json({ success: true, task });
@@ -69,10 +77,13 @@ router.post('/:taskId/comments', requireProjectMember, async (req, res) => {
   }
 });
 
-// DELETE /api/projects/:id/tasks/:taskId — PM, TL, Admin
+/* ── DELETE /api/projects/:id/tasks/:taskId — PM or TL ───────────────────── */
 router.delete('/:taskId', requireProjectRole('project_manager', 'team_lead'), async (req, res) => {
   try {
-    await Task.findByIdAndDelete(req.params.taskId);
+    await Task.findOneAndDelete({
+      _id:            req.params.taskId,
+      organizationId: req.user.organizationId,
+    });
     res.json({ success: true, message: 'Task deleted' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

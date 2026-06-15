@@ -1,14 +1,10 @@
 const mongoose = require('mongoose');
 
-/**
- * ProjectMember — stores a user's role WITHIN this specific project.
- * A user can be 'team_lead' in Project A and 'member' in Project B.
- */
 const ProjectMemberSchema = new mongoose.Schema({
   user:        { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   projectRole: {
     type: String,
-    enum: ['project_manager', 'team_lead', 'member', 'client'],
+    enum: ['project_manager', 'team_lead', 'member'],
     default: 'member',
   },
   addedAt: { type: Date, default: Date.now },
@@ -23,13 +19,16 @@ const ProjectSchema = new mongoose.Schema({
   startDate:   { type: Date },
   dueDate:     { type: Date },
 
-  // Members with their project-level roles
-  members:     [ProjectMemberSchema],
+  members:    [ProjectMemberSchema],
+  createdBy:  { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 
-  createdBy:   { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  organizationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Organization',
+    required: true,
+  },
 }, { timestamps: true });
 
-/* Virtual: task count (populated externally) */
 ProjectSchema.virtual('taskCount', {
   ref:          'Task',
   localField:   '_id',

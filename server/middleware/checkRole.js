@@ -2,9 +2,12 @@ const Project = require('../models/Project');
 
 /**
  * System-role gate — checks req.user.systemRole.
- * Usage: router.post('/', protect, requireRole('admin','project_manager'), handler)
+ * Admin always passes every role gate (top of hierarchy).
+ *
+ * Usage: router.post('/', protect, requireRole('project_manager'), handler)
  */
 const requireRole = (...roles) => (req, res, next) => {
+  if (req.user.systemRole === 'admin') return next();
   if (!roles.includes(req.user.systemRole)) {
     return res.status(403).json({
       success: false,
@@ -16,19 +19,34 @@ const requireRole = (...roles) => (req, res, next) => {
 
 /**
  * Project-level role gate.
- * Loads the project and checks if req.user has one of the required PROJECT roles.
- * Admin always passes.
+ * Always loads the project and enforces org isolation.
+ * Admin bypasses the role check but the project is still loaded and attached.
  *
  * Usage: router.post('/:id/tasks', protect, requireProjectRole('team_lead','project_manager'), handler)
  */
 const requireProjectRole = (...roles) => async (req, res, next) => {
-  if (req.user.systemRole === 'admin') return next();
-
   try {
-    const project = await Project.findById(req.params.id || req.params.projectId);
-    if (!project) return res.status(404).json({ success: false, message: 'Project not found' });
+    const project = await Project.findOne({
+      _id:            req.params.id || req.params.projectId,
+      organizationId: req.user.organizationId,
+    }).populate('members.user', 'name email avatar title');
 
-    const membership = project.members.find(m => m.user.toString() === req.user._id.toString());
+    if (!project) {
+      return res.status(404).json({ success: false, message: 'Project not found' });
+    }
+
+    req.project = project;
+
+    // Admin always passes — give them full project-manager level access
+    if (req.user.systemRole === 'admin') {
+      req.projectRole = 'project_manager';
+      return next();
+    }
+
+    const membership = project.members.find(
+      m => (m.user?._id || m.user).toString() === req.user._id.toString()
+    );
+
     if (!membership) {
       return res.status(403).json({ success: false, message: 'You are not a member of this project' });
     }
@@ -41,7 +59,6 @@ const requireProjectRole = (...roles) => async (req, res, next) => {
     }
 
     req.projectRole = membership.projectRole;
-    req.project     = project;
     next();
   } catch (err) {
     next(err);
@@ -50,22 +67,35 @@ const requireProjectRole = (...roles) => async (req, res, next) => {
 
 /**
  * Ensure the current user is a member (any role) of the project.
- * Admins always pass.
+ * Admin always passes. Project is always loaded and attached to req.project.
  */
 const requireProjectMember = async (req, res, next) => {
-  if (req.user.systemRole === 'admin') return next();
-
   try {
-    const project = await Project.findById(req.params.id || req.params.projectId);
-    if (!project) return res.status(404).json({ success: false, message: 'Project not found' });
+    const project = await Project.findOne({
+      _id:            req.params.id || req.params.projectId,
+      organizationId: req.user.organizationId,
+    }).populate('members.user', 'name email avatar title');
 
-    const membership = project.members.find(m => m.user.toString() === req.user._id.toString());
+    if (!project) {
+      return res.status(404).json({ success: false, message: 'Project not found' });
+    }
+
+    req.project = project;
+
+    if (req.user.systemRole === 'admin') {
+      req.projectRole = 'project_manager';
+      return next();
+    }
+
+    const membership = project.members.find(
+      m => (m.user?._id || m.user).toString() === req.user._id.toString()
+    );
+
     if (!membership) {
       return res.status(403).json({ success: false, message: 'You are not a member of this project' });
     }
 
     req.projectRole = membership.projectRole;
-    req.project     = project;
     next();
   } catch (err) {
     next(err);

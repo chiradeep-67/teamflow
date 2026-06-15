@@ -1,39 +1,31 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
-  ArrowLeft, Plus, MoreHorizontal, Flame, AlertCircle, Circle,
-  Clock, Search, Users, Settings, X, Check, Calendar,
+  ArrowLeft, Plus, Flame, AlertCircle, Circle,
+  Clock, Search, X, Calendar, Loader2, Users, Trash2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { usePermissions } from '../hooks/usePermissions';
-import { ProjectRoleGate } from '../components/common/RoleGate';
 import { RoleBadge } from '../components/common/RoleBadge';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { MOCK_TASKS, MOCK_USERS, MOCK_PROJECTS } from '../data/mockData';
+import { projectsAPI, tasksAPI, usersAPI } from '../services/api';
 import { cn } from '../utils/cn';
 
-/* ─── Helpers ─── */
-const AVATAR_COLORS = {
-  SC:'from-red-500 to-rose-600', MR:'from-indigo-500 to-violet-600',
-  AJ:'from-violet-500 to-purple-600', PS:'from-teal-500 to-cyan-600',
-  TK:'from-amber-500 to-orange-500', AC:'from-gray-400 to-gray-600',
-};
-
+/* ─── Config ─── */
 const PRIORITY_MAP = {
-  urgent: { icon: Flame, cls: 'text-red-500',    label: 'Urgent', dot: 'bg-red-500' },
-  high:   { icon: AlertCircle, cls: 'text-orange-500', label: 'High', dot: 'bg-orange-400' },
-  medium: { icon: Circle, cls: 'text-yellow-500',  label: 'Medium', dot: 'bg-yellow-400' },
-  low:    { icon: Circle, cls: 'text-gray-300 dark:text-gray-600', label: 'Low', dot: 'bg-gray-300 dark:bg-gray-600' },
+  urgent: { icon: Flame,        cls: 'text-red-500',    label: 'Urgent', dot: 'bg-red-500' },
+  high:   { icon: AlertCircle,  cls: 'text-orange-500', label: 'High',   dot: 'bg-orange-400' },
+  medium: { icon: Circle,       cls: 'text-yellow-500', label: 'Medium', dot: 'bg-yellow-400' },
+  low:    { icon: Circle,       cls: 'text-gray-300 dark:text-gray-600', label: 'Low', dot: 'bg-gray-300 dark:bg-gray-600' },
 };
 
 const TAG_COLORS = {
-  Backend: 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400',
+  Backend:  'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400',
   Frontend: 'bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400',
-  Design: 'bg-pink-50 dark:bg-pink-500/10 text-pink-600 dark:text-pink-400',
-  Mobile: 'bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-400',
+  Design:   'bg-pink-50 dark:bg-pink-500/10 text-pink-600 dark:text-pink-400',
+  Mobile:   'bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-400',
   Security: 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400',
-  Docs: 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400',
+  Docs:     'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400',
   Payments: 'bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400',
 };
 
@@ -44,36 +36,209 @@ const COLS_CONFIG = [
   { id: 'done',        label: 'Done',        color: '#22c55e' },
 ];
 
-function Avatar({ initials, size = 'sm' }) {
+const STATUS_LABEL = { todo: 'To Do', in_progress: 'In Progress', in_review: 'In Review', done: 'Done' };
+
+/* ─── Avatar ─── */
+function UserAvatar({ user, size = 'sm' }) {
   const sz = size === 'sm' ? 'w-6 h-6 text-[10px]' : 'w-7 h-7 text-xs';
+  const initials = user?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?';
   return (
-    <div className={cn('rounded-full font-semibold text-white flex items-center justify-center bg-gradient-to-br', sz, AVATAR_COLORS[initials] ?? 'from-gray-400 to-gray-600')}>
-      {initials?.[0]}
+    <div className={cn('rounded-full font-semibold text-white flex items-center justify-center bg-indigo-500', sz)}>
+      {initials}
     </div>
   );
 }
 
-/* ─── Task Create/Edit Modal ─── */
-function TaskModal({ project, task, onClose, onSave }) {
-  const { allUsers } = useAuth();
-  const projectMembers = project.members.map(m => allUsers.find(u => u.id === m.userId)).filter(Boolean);
+const PROJECT_ROLES = [
+  { value: 'project_manager', label: 'Project Manager' },
+  { value: 'team_lead',       label: 'Team Lead' },
+  { value: 'member',          label: 'Member' },
+  { value: 'client',          label: 'Client (read-only)' },
+];
+
+/* ─── Manage Team Modal ─── */
+function ManageTeamModal({ project, onClose, onProjectUpdate }) {
+  const [allUsers,    setAllUsers]    = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [selectedUser, setSelectedUser] = useState('');
+  const [selectedRole, setSelectedRole] = useState('member');
+  const [adding,       setAdding]       = useState(false);
+  const [removing,     setRemoving]     = useState(null);
+  const [error,        setError]        = useState('');
+
+  const memberIds = new Set(project.members.map(m => m.user?._id || m.user));
+
+  useEffect(() => {
+    usersAPI.getAll()
+      .then(res => setAllUsers(res.data.users || []))
+      .catch(() => {})
+      .finally(() => setLoadingUsers(false));
+  }, []);
+
+  const available = allUsers.filter(u => !memberIds.has(u._id || u.id));
+
+  const handleAdd = async () => {
+    if (!selectedUser) return;
+    setAdding(true);
+    setError('');
+    try {
+      const { data } = await projectsAPI.addMember(project._id, {
+        userId: selectedUser,
+        projectRole: selectedRole,
+      });
+      onProjectUpdate(data.project);
+      setSelectedUser('');
+      setSelectedRole('member');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to add member');
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const handleRemove = async (userId) => {
+    setRemoving(userId);
+    setError('');
+    try {
+      const { data } = await projectsAPI.removeMember(project._id, userId);
+      onProjectUpdate(data.project);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to remove member');
+    } finally {
+      setRemoving(null);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+      <div className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/70 dark:border-gray-700 animate-slide-up overflow-hidden max-h-[85vh] flex flex-col">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
+          <div className="flex items-center gap-2">
+            <Users size={15} className="text-indigo-500" />
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Manage Team</h2>
+            <span className="text-xs text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded-md">{project.members.length}</span>
+          </div>
+          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
+            <X size={15} />
+          </button>
+        </div>
+
+        <div className="overflow-y-auto p-6 space-y-5 flex-1">
+          {error && (
+            <div className="p-3 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200/70 dark:border-red-500/20 text-red-600 dark:text-red-400 text-xs">
+              {error}
+            </div>
+          )}
+
+          {/* Current members */}
+          <div>
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Current Members</p>
+            <div className="space-y-2">
+              {project.members.map(m => {
+                const u = m.user;
+                if (!u) return null;
+                const uid = u._id || u;
+                const roleLabel = PROJECT_ROLES.find(r => r.value === m.projectRole)?.label ?? m.projectRole;
+                return (
+                  <div key={uid} className="flex items-center justify-between py-2 px-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-7 h-7 rounded-full bg-indigo-500 flex items-center justify-center text-white text-[10px] font-bold shrink-0">
+                        {u.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-gray-900 dark:text-white truncate">{u.name}</p>
+                        <p className="text-[10px] text-gray-400 dark:text-gray-600 truncate">{roleLabel}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleRemove(uid)}
+                      disabled={removing === uid}
+                      className="ml-2 w-6 h-6 rounded-md flex items-center justify-center text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors shrink-0 disabled:opacity-40"
+                      title="Remove from project"
+                    >
+                      {removing === uid
+                        ? <Loader2 size={12} className="animate-spin" />
+                        : <Trash2 size={12} />}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Add new member */}
+          <div>
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Add Member</p>
+            {loadingUsers ? (
+              <div className="flex items-center gap-2 text-xs text-gray-400 py-2">
+                <Loader2 size={13} className="animate-spin" /> Loading workspace members…
+              </div>
+            ) : available.length === 0 ? (
+              <p className="text-xs text-gray-400 dark:text-gray-600 py-2">All workspace members are already in this project.</p>
+            ) : (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <select
+                    value={selectedUser}
+                    onChange={e => setSelectedUser(e.target.value)}
+                    className="h-9 rounded-lg text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 px-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all"
+                  >
+                    <option value="">Select person…</option>
+                    {available.map(u => (
+                      <option key={u._id} value={u._id}>{u.name}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={selectedRole}
+                    onChange={e => setSelectedRole(e.target.value)}
+                    className="h-9 rounded-lg text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 px-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all"
+                  >
+                    {PROJECT_ROLES.map(r => (
+                      <option key={r.value} value={r.value}>{r.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <Button
+                  fullWidth
+                  size="sm"
+                  onClick={handleAdd}
+                  isLoading={adding}
+                  disabled={!selectedUser || adding}
+                  leftIcon={<Plus size={13} />}
+                >
+                  Add to project
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Task Create / Edit Modal ─── */
+function TaskModal({ project, task, onClose, onSave, saving }) {
+  const members = project?.members ?? [];
 
   const [form, setForm] = useState({
-    title: task?.title ?? '',
+    title:       task?.title       ?? '',
     description: task?.description ?? '',
-    priority: task?.priority ?? 'medium',
-    status: task?.status ?? 'todo',
-    assignedTo: task?.assignedTo ?? '',
-    dueDate: task?.dueDate ?? '',
-    tags: task?.tags ?? [],
+    priority:    task?.priority    ?? 'medium',
+    status:      task?.status      ?? 'todo',
+    assignedTo:  task?.assignedTo?._id ?? task?.assignedTo ?? '',
+    dueDate:     task?.dueDate ? task.dueDate.slice(0, 10) : '',
+    tags:        task?.tags ?? [],
   });
   const [error, setError] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.title.trim()) { setError('Title is required'); return; }
-    onSave({ ...task, ...form, id: task?.id ?? `t${Date.now()}`, projectId: project.id, createdBy: task?.createdBy ?? 'u1', comments: task?.comments ?? [] });
-    onClose();
+    onSave({ ...(task?._id ? { _id: task._id } : {}), ...form });
   };
 
   return (
@@ -81,7 +246,7 @@ function TaskModal({ project, task, onClose, onSave }) {
       <div className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-lg bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/70 dark:border-gray-700 animate-slide-up overflow-hidden max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-white">{task ? 'Edit Task' : 'Create Task'}</h2>
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-white">{task?._id ? 'Edit Task' : 'Create Task'}</h2>
           <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"><X size={15} /></button>
         </div>
         <form onSubmit={handleSubmit} className="overflow-y-auto p-6 space-y-4">
@@ -98,49 +263,45 @@ function TaskModal({ project, task, onClose, onSave }) {
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            {/* Priority */}
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Priority</label>
               <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}
-                className="h-10 rounded-lg text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all">
+                className="h-10 rounded-lg text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all">
                 <option value="urgent">🔴 Urgent</option>
                 <option value="high">🟠 High</option>
                 <option value="medium">🟡 Medium</option>
                 <option value="low">⚪ Low</option>
               </select>
             </div>
-            {/* Status */}
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
               <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}
-                className="h-10 rounded-lg text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all">
-                <option value="todo">To Do</option>
-                <option value="in_progress">In Progress</option>
-                <option value="in_review">In Review</option>
-                <option value="done">Done</option>
+                className="h-10 rounded-lg text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all">
+                {COLS_CONFIG.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
               </select>
             </div>
-            {/* Assigned To */}
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Assign To</label>
               <select value={form.assignedTo} onChange={e => setForm(f => ({ ...f, assignedTo: e.target.value }))}
-                className="h-10 rounded-lg text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all">
+                className="h-10 rounded-lg text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all">
                 <option value="">Unassigned</option>
-                {projectMembers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                {members.map(m => {
+                  const u = m.user;
+                  return u ? <option key={u._id} value={u._id}>{u.name}</option> : null;
+                })}
               </select>
             </div>
-            {/* Due Date */}
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Due Date</label>
-              <Input type="text" placeholder="Jun 30, 2024" value={form.dueDate}
+              <Input type="date" value={form.dueDate}
                 onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))}
                 leftIcon={<Calendar size={13} />} />
             </div>
           </div>
 
-          <div className="flex gap-2 pt-2 shrink-0">
+          <div className="flex gap-2 pt-2">
             <Button type="button" variant="secondary" fullWidth onClick={onClose}>Cancel</Button>
-            <Button type="submit" fullWidth>{task ? 'Save changes' : 'Create task'}</Button>
+            <Button type="submit" fullWidth isLoading={saving}>{task?._id ? 'Save changes' : 'Create task'}</Button>
           </div>
         </form>
       </div>
@@ -148,29 +309,27 @@ function TaskModal({ project, task, onClose, onSave }) {
   );
 }
 
-/* ─── Task Card (Kanban) ─── */
-function TaskCard({ task, project, onDragStart, onOpenTask, canEdit }) {
-  const P = PRIORITY_MAP[task.priority];
-  const assignee = MOCK_USERS.find(u => u.id === task.assignedTo);
+/* ─── Task Card ─── */
+function TaskCard({ task, onDragStart, onOpenTask, canEdit }) {
+  const P = PRIORITY_MAP[task.priority] ?? PRIORITY_MAP.medium;
   const tagCls = task.tags?.[0] ? (TAG_COLORS[task.tags[0]] ?? 'bg-gray-100 dark:bg-gray-700 text-gray-500') : null;
 
   return (
     <div
       draggable={canEdit}
-      onDragStart={canEdit ? (e) => onDragStart(e, task.id, task.status) : undefined}
+      onDragStart={canEdit ? (e) => onDragStart(e, task._id, task.status) : undefined}
       onClick={() => onOpenTask(task)}
       className={cn(
         'group bg-white dark:bg-gray-800 rounded-xl border border-gray-200/70 dark:border-gray-700/50',
         'p-3.5 select-none transition-all duration-150',
         canEdit ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer',
-        'hover:border-indigo-200 dark:hover:border-indigo-500/40 hover:shadow-sm',
-        'animate-fade-in',
+        'hover:border-indigo-200 dark:hover:border-indigo-500/40 hover:shadow-sm animate-fade-in',
       )}
     >
       <div className="flex items-center justify-between mb-2">
-        {tagCls && task.tags?.[0] ? (
-          <span className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded-md', tagCls)}>{task.tags[0]}</span>
-        ) : <span />}
+        {tagCls && task.tags?.[0]
+          ? <span className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded-md', tagCls)}>{task.tags[0]}</span>
+          : <span />}
         <P.icon size={13} className={P.cls} />
       </div>
       <p className={cn('text-sm font-medium leading-snug mb-2.5', task.status === 'done' ? 'line-through text-gray-400 dark:text-gray-600' : 'text-gray-800 dark:text-gray-200')}>
@@ -178,16 +337,17 @@ function TaskCard({ task, project, onDragStart, onOpenTask, canEdit }) {
       </p>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1 text-[10px] text-gray-400 dark:text-gray-600">
-          <Clock size={10} /><span>{task.dueDate}</span>
+          <Clock size={10} />
+          <span>{task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}</span>
         </div>
-        {assignee && <Avatar initials={assignee.avatar} />}
+        {task.assignedTo && <UserAvatar user={task.assignedTo} size="sm" />}
       </div>
     </div>
   );
 }
 
 /* ─── Kanban Column ─── */
-function KanbanCol({ col, tasks, project, onDragStart, onDrop, onOpenTask, onAddTask, canCreate }) {
+function KanbanCol({ col, tasks, onDragStart, onDrop, onOpenTask, onAddTask, canCreate }) {
   const [isDragOver, setIsDragOver] = useState(false);
 
   return (
@@ -215,8 +375,7 @@ function KanbanCol({ col, tasks, project, onDragStart, onDrop, onOpenTask, onAdd
         )}
       >
         {tasks.map(task => (
-          <TaskCard key={task.id} task={task} project={project}
-            onDragStart={onDragStart} onOpenTask={onOpenTask} canEdit={canCreate} />
+          <TaskCard key={task._id} task={task} onDragStart={onDragStart} onOpenTask={onOpenTask} canEdit={canCreate} />
         ))}
         {tasks.length === 0 && !isDragOver && (
           <div className="flex items-center justify-center flex-1 text-xs text-gray-300 dark:text-gray-700">
@@ -229,58 +388,56 @@ function KanbanCol({ col, tasks, project, onDragStart, onDrop, onOpenTask, onAdd
 }
 
 /* ─── Task Detail Panel ─── */
-function TaskPanel({ task, project, onClose, onEdit, onSave, canEdit }) {
-  const { user } = useAuth();
-  const P = PRIORITY_MAP[task.priority];
-  const assignee = MOCK_USERS.find(u => u.id === task.assignedTo);
-  const creator  = MOCK_USERS.find(u => u.id === task.createdBy);
-  const [comment, setComment] = useState('');
-  const [comments, setComments] = useState(task.comments ?? []);
+function TaskPanel({ task, projectId, onClose, onEdit, onUpdate, canEdit, currentUser }) {
+  const P = PRIORITY_MAP[task.priority] ?? PRIORITY_MAP.medium;
+  const [comment, setComment]   = useState('');
+  const [posting, setPosting]   = useState(false);
+  const [localComments, setLocalComments] = useState(task.comments ?? []);
 
-  // Members can only edit if it's assigned to them
-  const isMyTask = task.assignedTo === user?.id;
-  const showEdit = canEdit || isMyTask;
+  const isMyTask   = (task.assignedTo?._id || task.assignedTo) === currentUser?.id;
+  const showEdit   = canEdit || isMyTask;
+  const isClient   = currentUser?.systemRole === 'client';
 
-  const handleStatusChange = (newStatus) => {
-    if (!isMyTask && !canEdit) return;
-    onSave({ ...task, status: newStatus });
+  const handleStatusChange = async (newStatus) => {
+    if (!showEdit) return;
+    await onUpdate(task._id, { status: newStatus });
   };
 
-  const handleComment = () => {
-    if (!comment.trim()) return;
-    setComments(prev => [...prev, { id: `c${Date.now()}`, userId: user.id, text: comment.trim(), createdAt: 'Just now' }]);
-    setComment('');
+  const handleComment = async () => {
+    if (!comment.trim() || isClient) return;
+    setPosting(true);
+    try {
+      const { data } = await tasksAPI.addComment(projectId, task._id, comment.trim());
+      setLocalComments(data.task.comments || []);
+      setComment('');
+    } catch {
+      /* silently fail */
+    } finally {
+      setPosting(false);
+    }
   };
-
-  const STATUS_OPTIONS = ['todo', 'in_progress', 'in_review', 'done'];
-  const STATUS_LABEL   = { todo:'To Do', in_progress:'In Progress', in_review:'In Review', done:'Done' };
 
   return (
     <div className="fixed inset-0 z-40 flex justify-end">
       <div className="absolute inset-0 bg-black/30 dark:bg-black/50" onClick={onClose} />
       <div className="relative w-full max-w-[440px] bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 h-full overflow-y-auto shadow-2xl flex flex-col">
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800 sticky top-0 bg-white dark:bg-gray-900 z-10">
           <div className="flex items-center gap-2">
             <P.icon size={14} className={P.cls} />
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{P.label} priority</span>
           </div>
           <div className="flex items-center gap-1.5">
-            {showEdit && (
-              <Button size="sm" variant="secondary" onClick={() => onEdit(task)}>Edit</Button>
-            )}
+            {showEdit && <Button size="sm" variant="secondary" onClick={() => onEdit(task)}>Edit</Button>}
             <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"><X size={15} /></button>
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Title + description */}
           <div>
             <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-2 leading-snug">{task.title}</h2>
             {task.description && <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{task.description}</p>}
           </div>
 
-          {/* Tags */}
           {task.tags?.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {task.tags.map(tag => (
@@ -289,31 +446,29 @@ function TaskPanel({ task, project, onClose, onEdit, onSave, canEdit }) {
             </div>
           )}
 
-          {/* Metadata grid */}
           <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
             <div>
-              <p className="text-[10px] font-medium text-gray-400 dark:text-gray-600 uppercase tracking-wider mb-1">Assignee</p>
-              {assignee ? (
-                <div className="flex items-center gap-1.5">
-                  <Avatar initials={assignee.avatar} size="sm" />
-                  <span className="text-xs font-medium text-gray-800 dark:text-gray-200">{assignee.name.split(' ')[0]}</span>
-                </div>
-              ) : <span className="text-xs text-gray-400">Unassigned</span>}
+              <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-1">Assignee</p>
+              {task.assignedTo
+                ? <div className="flex items-center gap-1.5"><UserAvatar user={task.assignedTo} /><span className="text-xs font-medium text-gray-800 dark:text-gray-200">{task.assignedTo.name?.split(' ')[0]}</span></div>
+                : <span className="text-xs text-gray-400">Unassigned</span>}
             </div>
             <div>
-              <p className="text-[10px] font-medium text-gray-400 dark:text-gray-600 uppercase tracking-wider mb-1">Due date</p>
-              <p className="text-xs font-medium text-gray-800 dark:text-gray-200">{task.dueDate || '—'}</p>
+              <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-1">Due Date</p>
+              <p className="text-xs font-medium text-gray-800 dark:text-gray-200">
+                {task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+              </p>
             </div>
             <div>
-              <p className="text-[10px] font-medium text-gray-400 dark:text-gray-600 uppercase tracking-wider mb-1">Created by</p>
-              <p className="text-xs font-medium text-gray-800 dark:text-gray-200">{creator?.name?.split(' ')[0] ?? '—'}</p>
+              <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-1">Created By</p>
+              <p className="text-xs font-medium text-gray-800 dark:text-gray-200">{task.createdBy?.name?.split(' ')[0] ?? '—'}</p>
             </div>
             <div>
-              <p className="text-[10px] font-medium text-gray-400 dark:text-gray-600 uppercase tracking-wider mb-1">Status</p>
-              {(showEdit) ? (
+              <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-1">Status</p>
+              {showEdit ? (
                 <select value={task.status} onChange={e => handleStatusChange(e.target.value)}
                   className="text-xs bg-transparent border-none text-gray-800 dark:text-gray-200 font-medium focus:outline-none cursor-pointer">
-                  {STATUS_OPTIONS.map(s => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+                  {COLS_CONFIG.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
                 </select>
               ) : (
                 <p className="text-xs font-medium text-gray-800 dark:text-gray-200">{STATUS_LABEL[task.status]}</p>
@@ -323,37 +478,35 @@ function TaskPanel({ task, project, onClose, onEdit, onSave, canEdit }) {
 
           {/* Comments */}
           <div>
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Comments ({comments.length})</p>
-            {comments.length > 0 ? (
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+              Comments ({localComments.length})
+            </p>
+            {localComments.length > 0 ? (
               <div className="space-y-3 mb-4">
-                {comments.map(c => {
-                  const author = MOCK_USERS.find(u => u.id === c.userId);
-                  return (
-                    <div key={c.id} className="flex items-start gap-2.5">
-                      <Avatar initials={author?.avatar ?? '?'} size="sm" />
-                      <div className="flex-1 min-w-0 bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-semibold text-gray-800 dark:text-gray-200">{author?.name?.split(' ')[0]}</span>
-                          <span className="text-[10px] text-gray-400">{c.createdAt}</span>
-                        </div>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{c.text}</p>
+                {localComments.map((c, i) => (
+                  <div key={c._id ?? i} className="flex items-start gap-2.5">
+                    <UserAvatar user={c.author} size="sm" />
+                    <div className="flex-1 min-w-0 bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-semibold text-gray-800 dark:text-gray-200">{c.author?.name?.split(' ')[0] ?? 'User'}</span>
+                        <span className="text-[10px] text-gray-400">{c.createdAt ? new Date(c.createdAt).toLocaleDateString() : ''}</span>
                       </div>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{c.text}</p>
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
             ) : (
-              <p className="text-xs text-gray-400 dark:text-gray-600 mb-4">No comments yet. Be the first to add one.</p>
+              <p className="text-xs text-gray-400 dark:text-gray-600 mb-4">No comments yet.</p>
             )}
 
-            {/* Comment box — not available to client */}
-            {user?.systemRole !== 'client' && (
+            {!isClient && (
               <div>
                 <textarea value={comment} onChange={e => setComment(e.target.value)} rows={2}
                   placeholder="Add a comment…"
                   className="w-full rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 px-3.5 py-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all" />
                 <div className="flex justify-end mt-2">
-                  <Button size="sm" onClick={handleComment} disabled={!comment.trim()}>Post comment</Button>
+                  <Button size="sm" onClick={handleComment} isLoading={posting} disabled={!comment.trim()}>Post comment</Button>
                 </div>
               </div>
             )}
@@ -369,66 +522,133 @@ export default function ProjectDetailPage() {
   const { id } = useParams();
   const { user, getProjectRole } = useAuth();
 
-  const project = MOCK_PROJECTS.find(p => p.id === id);
-  const projectRole = getProjectRole(id);
-
-  const [tasks, setTasks] = useState(MOCK_TASKS.filter(t => t.projectId === id));
-  const [activeTask, setActiveTask] = useState(null);
+  const [project, setProject]         = useState(null);
+  const [tasks, setTasks]             = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [notFound, setNotFound]       = useState(false);
+  const [activeTask, setActiveTask]   = useState(null);
   const [editingTask, setEditingTask] = useState(null);
-  const [newTaskCol, setNewTaskCol] = useState(null);
-  const [search, setSearch] = useState('');
+  const [newTaskCol, setNewTaskCol]   = useState(null);
+  const [saving, setSaving]           = useState(false);
+  const [search, setSearch]           = useState('');
+  const [manageTeam, setManageTeam]   = useState(false);
   const dragging = useRef({ taskId: null, fromCol: null });
 
-  if (!project) return (
-    <div className="p-6 text-center">
-      <p className="text-gray-500">Project not found or you don't have access.</p>
-      <Link to="/projects" className="text-indigo-600 text-sm hover:underline mt-2 inline-block">← Back to projects</Link>
-    </div>
-  );
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      try {
+        const [pRes, tRes] = await Promise.all([
+          projectsAPI.getById(id),
+          tasksAPI.getByProject(id),
+        ]);
+        if (!cancelled) {
+          setProject(pRes.data.project);
+          setTasks(tRes.data.tasks || []);
+        }
+      } catch (err) {
+        if (!cancelled) setNotFound(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [id]);
 
-  if (!projectRole) return (
-    <div className="p-6 text-center">
-      <p className="text-gray-500">You don't have access to this project.</p>
-      <Link to="/projects" className="text-indigo-600 text-sm hover:underline mt-2 inline-block">← Back to projects</Link>
-    </div>
-  );
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 size={24} className="animate-spin text-indigo-500" />
+      </div>
+    );
+  }
 
-  const canCreate = ['admin', 'project_manager', 'team_lead'].includes(projectRole);
-  const canEdit   = canCreate; // PM/TL/Admin can edit any task
-  const isClient  = projectRole === 'client';
+  if (notFound || !project) {
+    return (
+      <div className="p-6 text-center">
+        <p className="text-gray-500">Project not found or you don&apos;t have access.</p>
+        <Link to="/projects" className="text-indigo-600 text-sm hover:underline mt-2 inline-block">← Back to projects</Link>
+      </div>
+    );
+  }
+
+  const projectRole = getProjectRole(project);
+
+  if (!projectRole) {
+    return (
+      <div className="p-6 text-center">
+        <p className="text-gray-500">You don&apos;t have access to this project.</p>
+        <Link to="/projects" className="text-indigo-600 text-sm hover:underline mt-2 inline-block">← Back to projects</Link>
+      </div>
+    );
+  }
+
+  const canCreate    = ['admin', 'project_manager', 'team_lead'].includes(projectRole);
+  const canEdit      = canCreate;
+  const canManageTeam = ['admin', 'project_manager'].includes(projectRole);
 
   const doneTasks = tasks.filter(t => t.status === 'done').length;
-  const pct = tasks.length ? Math.round((doneTasks / tasks.length) * 100) : 0;
+  const pct       = tasks.length ? Math.round((doneTasks / tasks.length) * 100) : 0;
 
+  /* ─── Drag handlers ─── */
   const handleDragStart = (e, taskId, fromCol) => {
     dragging.current = { taskId, fromCol };
     e.dataTransfer.effectAllowed = 'move';
   };
 
-  const handleDrop = (e, toCol) => {
+  const handleDrop = async (e, toCol) => {
     e.preventDefault();
     const { taskId, fromCol } = dragging.current;
     if (!taskId || fromCol === toCol) return;
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: toCol } : t));
     dragging.current = { taskId: null, fromCol: null };
+
+    /* Optimistic update */
+    setTasks(prev => prev.map(t => t._id === taskId ? { ...t, status: toCol } : t));
+
+    try {
+      await tasksAPI.update(id, taskId, { status: toCol });
+    } catch {
+      /* Revert on failure */
+      setTasks(prev => prev.map(t => t._id === taskId ? { ...t, status: fromCol } : t));
+    }
   };
 
-  const handleSaveTask = (updatedTask) => {
-    setTasks(prev => {
-      const exists = prev.find(t => t.id === updatedTask.id);
-      if (exists) return prev.map(t => t.id === updatedTask.id ? updatedTask : t);
-      return [...prev, updatedTask];
-    });
-    setActiveTask(updatedTask);
+  /* ─── Update task (status change from panel) ─── */
+  const handleUpdate = async (taskId, data) => {
+    setTasks(prev => prev.map(t => t._id === taskId ? { ...t, ...data } : t));
+    if (activeTask?._id === taskId) setActiveTask(prev => ({ ...prev, ...data }));
+    try {
+      await tasksAPI.update(id, taskId, data);
+    } catch {
+      /* revert not implemented — reload page if needed */
+    }
+  };
+
+  /* ─── Save task (create / edit) ─── */
+  const handleSaveTask = async (formData) => {
+    setSaving(true);
+    try {
+      if (formData._id) {
+        const { data } = await tasksAPI.update(id, formData._id, formData);
+        setTasks(prev => prev.map(t => t._id === formData._id ? data.task : t));
+      } else {
+        const { data } = await tasksAPI.create(id, formData);
+        setTasks(prev => [...prev, data.task]);
+      }
+      setEditingTask(null);
+      setNewTaskCol(null);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to save task');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const filteredTasks = search
     ? tasks.filter(t => t.title.toLowerCase().includes(search.toLowerCase()))
     : tasks;
-
-  const memberUsers = project.members.map(m => ({
-    ...m, user: MOCK_USERS.find(u => u.id === m.userId),
-  }));
 
   return (
     <div className="flex flex-col h-[calc(100vh-0px)] lg:h-screen overflow-hidden">
@@ -439,36 +659,43 @@ export default function ProjectDetailPage() {
             <Link to="/projects" className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors shrink-0">
               <ArrowLeft size={16} />
             </Link>
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${project.color}20` }}>
-              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: project.color }} />
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${project.color || '#6366f1'}20` }}>
+              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: project.color || '#6366f1' }} />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h1 className="text-base font-bold text-gray-900 dark:text-white truncate">{project.name}</h1>
                 <RoleBadge role={projectRole} size="xs" />
               </div>
-              <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">{tasks.length} tasks · {pct}% complete · Due {project.dueDate}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">
+                {tasks.length} tasks · {pct}% complete
+                {project.dueDate && ` · Due ${new Date(project.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
+              </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {/* Members */}
             <div className="hidden sm:flex -space-x-1.5">
-              {memberUsers.slice(0, 5).map(({ user: u, userId }) => u && (
-                <div key={userId} title={u.name} className={cn('w-7 h-7 rounded-full text-[10px] font-semibold text-white flex items-center justify-center bg-gradient-to-br ring-2 ring-white dark:ring-gray-900', AVATAR_COLORS[u.avatar] ?? 'from-gray-400 to-gray-600')}>
-                  {u.avatar?.[0]}
+              {project.members?.slice(0, 5).map((m) => m.user && (
+                <div key={m.user._id} title={m.user.name} className="ring-2 ring-white dark:ring-gray-900 rounded-full">
+                  <UserAvatar user={m.user} size="sm" />
                 </div>
               ))}
             </div>
-
-            {/* Search */}
+            {canManageTeam && (
+              <button
+                onClick={() => setManageTeam(true)}
+                className="hidden sm:flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                <Users size={12} />
+                Team
+              </button>
+            )}
             <div className="relative hidden md:block">
               <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tasks…"
                 className="h-8 pl-8 pr-3 rounded-lg text-xs bg-gray-100 dark:bg-gray-800 border border-transparent text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:border-indigo-300 dark:focus:border-indigo-500/50 w-40 transition-all" />
             </div>
-
-            {/* Add task — only for PM, TL, Admin */}
             {canCreate && (
               <Button size="sm" leftIcon={<Plus size={13} />} onClick={() => setNewTaskCol('todo')}>
                 Add task
@@ -476,10 +703,8 @@ export default function ProjectDetailPage() {
             )}
           </div>
         </div>
-
-        {/* Progress bar */}
         <div className="mt-3 h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: project.color }} />
+          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: project.color || '#6366f1' }} />
         </div>
       </div>
 
@@ -491,7 +716,6 @@ export default function ProjectDetailPage() {
               key={col.id}
               col={col}
               tasks={filteredTasks.filter(t => t.status === col.id)}
-              project={project}
               onDragStart={handleDragStart}
               onDrop={handleDrop}
               onOpenTask={setActiveTask}
@@ -502,25 +726,33 @@ export default function ProjectDetailPage() {
         </div>
       </div>
 
-      {/* Task detail panel */}
       {activeTask && (
         <TaskPanel
           task={activeTask}
-          project={project}
+          projectId={id}
           onClose={() => setActiveTask(null)}
           onEdit={(t) => { setEditingTask(t); setActiveTask(null); }}
-          onSave={handleSaveTask}
+          onUpdate={handleUpdate}
           canEdit={canEdit}
+          currentUser={user}
         />
       )}
 
-      {/* Task create modal */}
       {(newTaskCol !== null || editingTask) && (
         <TaskModal
           project={project}
           task={editingTask ? editingTask : { status: newTaskCol }}
           onClose={() => { setNewTaskCol(null); setEditingTask(null); }}
           onSave={handleSaveTask}
+          saving={saving}
+        />
+      )}
+
+      {manageTeam && (
+        <ManageTeamModal
+          project={project}
+          onClose={() => setManageTeam(false)}
+          onProjectUpdate={(updated) => setProject(updated)}
         />
       )}
     </div>
