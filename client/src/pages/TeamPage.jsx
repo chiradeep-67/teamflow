@@ -166,7 +166,7 @@ function AddMemberModal({ departments, allowedRoles, onClose, onAdded }) {
             <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20">
               <KeyRound size={14} className="text-indigo-500 shrink-0 mt-0.5" />
               <p className="text-xs text-indigo-700 dark:text-indigo-300">
-                A temporary password will be auto-generated. The member must change it on first login.
+                Password is auto-generated from their name + last 4 digits of phone. They can log in directly with it.
               </p>
             </div>
 

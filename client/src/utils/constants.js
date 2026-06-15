@@ -6,6 +6,7 @@ export const ROUTES = {
   LOGIN:           '/login',
   REGISTER:        '/register',
   CHANGE_PASSWORD: '/change-password',
+  CREATE_ORG:      '/create-org',
   DASHBOARD:       '/dashboard',
   PROJECTS:        '/projects',
   PROJECT:         '/projects/:id',

@@ -34,6 +34,7 @@ export const authAPI = {
   login:          (data) => api.post('/auth/login', data),
   me:             ()     => api.get('/auth/me'),
   changePassword: (data) => api.post('/auth/change-password', data),
+  createOrg:      (data) => api.post('/auth/create-org', data),
 };
 
 /* ─── Users ─── */

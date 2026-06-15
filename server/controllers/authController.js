@@ -1,6 +1,8 @@
-const jwt        = require('jsonwebtoken');
-const User       = require('../models/User');
-const Invitation = require('../models/Invitation');
+const jwt          = require('jsonwebtoken');
+const User         = require('../models/User');
+const Invitation   = require('../models/Invitation');
+const Organization = require('../models/Organization');
+const Workspace    = require('../models/Workspace');
 
 const generateToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE || '7d' });
@@ -157,4 +159,63 @@ const changePassword = async (req, res) => {
   }
 };
 
-module.exports = { register, login, getMe, getSetupStatus, changePassword };
+// ─── POST /api/auth/create-org ────────────────────────────────────────────
+// Public endpoint. Anyone can create a new organisation + admin account.
+// Creates: Organization → Admin User → Workspace, then returns a JWT (auto-login).
+const createOrg = async (req, res) => {
+  try {
+    const { orgName, name, email, password, phone } = req.body;
+
+    if (!orgName?.trim())   return res.status(400).json({ success: false, message: 'Organisation name is required' });
+    if (!name?.trim())      return res.status(400).json({ success: false, message: 'Your name is required' });
+    if (!email?.trim())     return res.status(400).json({ success: false, message: 'Email is required' });
+    if (!password)          return res.status(400).json({ success: false, message: 'Password is required' });
+    if (password.length < 8) return res.status(400).json({ success: false, message: 'Password must be at least 8 characters' });
+
+    // Check email not already taken
+    if (await User.findOne({ email: email.toLowerCase() })) {
+      return res.status(400).json({ success: false, message: 'An account with this email already exists' });
+    }
+
+    // 1. Create organisation
+    const org = await Organization.create({ name: orgName.trim() });
+
+    // 2. Create admin user
+    const admin = await User.create({
+      name:           name.trim(),
+      email:          email.toLowerCase().trim(),
+      password,                          // pre-save hook hashes it
+      phone:          phone || '',
+      systemRole:     'admin',
+      organizationId: org._id,
+      isActive:       true,
+    });
+
+    // 3. Create workspace — slug from org name, ensure uniqueness
+    const base = orgName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    let slug = base;
+    let attempt = 1;
+    while (await Workspace.findOne({ slug })) {
+      slug = `${base}-${attempt++}`;
+    }
+
+    await Workspace.create({
+      name:           orgName.trim(),
+      slug,
+      organizationId: org._id,
+      createdBy:      admin._id,
+      departments:    [],
+    });
+
+    res.status(201).json({
+      success: true,
+      token:   generateToken(admin._id),
+      user:    userPayload(admin),
+      message: `Organisation "${orgName}" created successfully`,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = { register, login, getMe, getSetupStatus, changePassword, createOrg };

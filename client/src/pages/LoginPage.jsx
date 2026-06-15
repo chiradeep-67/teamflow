@@ -176,8 +176,14 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            <p className="mt-6 text-center text-xs text-gray-400 dark:text-gray-600">
-              New members join via invite link shared by their Admin.
+            <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+              New to TeamFlow?{' '}
+              <a href="/create-org" className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline">
+                Create your organisation
+              </a>
+            </p>
+            <p className="text-center text-xs text-gray-400 dark:text-gray-600 mt-1">
+              Team members join via invite link from their Admin.
             </p>
           </div>
         </div>

@@ -6,6 +6,7 @@ import LandingPage         from './pages/LandingPage';
 import LoginPage           from './pages/LoginPage';
 import RegisterPage        from './pages/RegisterPage';
 import ChangePasswordPage  from './pages/ChangePasswordPage';
+import CreateOrgPage       from './pages/CreateOrgPage';
 import DashboardPage       from './pages/DashboardPage';
 import ProjectsPage        from './pages/ProjectsPage';
 import ProjectDetailPage   from './pages/ProjectDetailPage';
@@ -65,9 +66,10 @@ export default function App() {
           <div className="min-h-screen text-gray-900 dark:text-white transition-colors duration-300">
             <Routes>
               {/* Public */}
-              <Route path={ROUTES.HOME}     element={<PublicRoute><LandingPage /></PublicRoute>} />
-              <Route path={ROUTES.LOGIN}    element={<PublicRoute><LoginPage /></PublicRoute>} />
-              <Route path={ROUTES.REGISTER} element={<RegisterPage />} />
+              <Route path={ROUTES.HOME}       element={<PublicRoute><LandingPage /></PublicRoute>} />
+              <Route path={ROUTES.LOGIN}      element={<PublicRoute><LoginPage /></PublicRoute>} />
+              <Route path={ROUTES.REGISTER}   element={<RegisterPage />} />
+              <Route path={ROUTES.CREATE_ORG} element={<PublicRoute><CreateOrgPage /></PublicRoute>} />
 
               {/* Force-change-password — auth required, no sidebar */}
               <Route
