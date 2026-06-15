@@ -49,9 +49,11 @@ router.post('/', requireRole('admin', 'project_manager'), async (req, res) => {
       return res.status(400).json({ success: false, message: 'A user with this email already exists' });
     }
 
-    // Generate a readable temp password: TF-XXXXXXXX
-    const tempPassword =
-      'TF-' + crypto.randomBytes(4).toString('hex').toUpperCase();
+    // Generate a memorable temp password: first 5 letters of name + last 4 digits of phone
+    // e.g. "Chiradeep Kumar", "9876543210" → "chira3210"
+    const namePart  = (name || '').replace(/\s+/g, '').toLowerCase().slice(0, 5).padEnd(4, 'x');
+    const phonePart = (phone || '').replace(/\D/g, '').slice(-4).padStart(4, () => Math.floor(Math.random() * 10));
+    const tempPassword = namePart + (phonePart || Math.floor(1000 + Math.random() * 9000));
 
     const user = await User.create({
       name,
@@ -170,7 +172,9 @@ router.post('/:id/reset-password', requireRole('admin'), async (req, res) => {
     }).select('+password');
     if (!target) return res.status(404).json({ success: false, message: 'User not found' });
 
-    const newPassword = 'TF-' + crypto.randomBytes(4).toString('hex').toUpperCase();
+    const namePart2  = (target.name || '').replace(/\s+/g, '').toLowerCase().slice(0, 5).padEnd(4, 'x');
+    const phonePart2 = (target.phone || '').replace(/\D/g, '').slice(-4);
+    const newPassword = namePart2 + (phonePart2 || Math.floor(1000 + Math.random() * 9000));
     target.password = newPassword; // pre-save hook hashes it
     await target.save();
 

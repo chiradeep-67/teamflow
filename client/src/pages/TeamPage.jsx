@@ -47,8 +47,9 @@ function TempPasswordCard({ name, email, tempPassword, emailSent, onClose }) {
         </div>
         <p className="text-sm font-semibold text-gray-900 dark:text-white">{name} added!</p>
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          Password is: first 5 letters of name + last 4 digits of phone.<br/>
           {emailSent
-            ? 'Login credentials have been emailed to them.'
+            ? 'Credentials have been emailed to them.'
             : 'Email not configured — share these credentials manually.'}
         </p>
       </div>

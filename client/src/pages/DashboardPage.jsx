@@ -109,7 +109,7 @@ export default function DashboardPage() {
             {greeting}, {user?.name?.split(' ')[0]} 👋
           </h1>
           <div className="flex items-center gap-2 mt-1">
-            <p className="text-sm text-gray-500 dark:text-gray-400">{user?.title || 'Team Member'}</p>
+            {user?.title && <p className="text-sm text-gray-500 dark:text-gray-400">{user.title}</p>}
             <RoleBadge role={user?.systemRole} size="xs" />
           </div>
         </div>
