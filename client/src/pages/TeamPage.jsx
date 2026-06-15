@@ -464,14 +464,17 @@ export default function TeamPage() {
     } catch { alert('Failed to revoke invite'); }
   };
 
-  const filtered = members
+  // Admin is the team creator — exclude them from the member list
+  const nonAdminMembers = members.filter(m => m.systemRole !== 'admin');
+
+  const filtered = nonAdminMembers
     .filter(m => roleFilter === 'all' || m.systemRole === roleFilter)
     .filter(m => deptFilter === 'all' || m.department === deptFilter)
     .filter(m => !search ||
       m.name.toLowerCase().includes(search.toLowerCase()) ||
       m.email.toLowerCase().includes(search.toLowerCase()));
 
-  const allRoles = [...new Set(members.map(m => m.systemRole))].filter(Boolean);
+  const allRoles = [...new Set(nonAdminMembers.map(m => m.systemRole))].filter(Boolean);
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -480,7 +483,7 @@ export default function TeamPage() {
         <div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Team</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-            {members.length} member{members.length !== 1 ? 's' : ''}
+            {nonAdminMembers.length} member{nonAdminMembers.length !== 1 ? 's' : ''}
             {isAdmin && invites.length > 0 && ` · ${invites.length} pending invite${invites.length !== 1 ? 's' : ''}`}
           </p>
         </div>
@@ -500,7 +503,7 @@ export default function TeamPage() {
       {/* Tabs */}
       <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800/60 rounded-lg p-1 w-fit mb-5">
         {[
-          { key: 'members', label: `Members (${members.length})` },
+          { key: 'members', label: `Members (${nonAdminMembers.length})` },
           ...(isAdmin ? [{ key: 'invites', label: `Pending invites (${invites.length})` }] : []),
         ].map(t => (
           <button key={t.key} onClick={() => setActiveTab(t.key)}
