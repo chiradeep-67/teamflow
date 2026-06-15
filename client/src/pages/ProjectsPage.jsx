@@ -253,7 +253,7 @@ export default function ProjectsPage() {
             {projects.filter(p => p.status === 'active').length} active · {projects.length} total
           </p>
         </div>
-        <RoleGate roles={['admin', 'project_manager']}>
+        <RoleGate roles={['project_manager']}>
           <Button size="sm" leftIcon={<Plus size={13} />} onClick={() => setShowModal(true)}>
             New project
           </Button>
@@ -297,7 +297,7 @@ export default function ProjectsPage() {
           <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
             {search ? 'No projects match your search' : "You haven't been added to any projects yet"}
           </p>
-          <RoleGate roles={['admin', 'project_manager']}>
+          <RoleGate roles={['project_manager']}>
             <Button size="sm" leftIcon={<Plus size={13} />} className="mt-4" onClick={() => setShowModal(true)}>
               Create first project
             </Button>
