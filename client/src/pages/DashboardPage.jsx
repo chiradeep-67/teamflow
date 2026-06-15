@@ -34,6 +34,7 @@ function Avatar({ name = '', size = 'sm' }) {
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const canCreateProject = user?.systemRole === 'project_manager';
   const { can } = usePermissions();
 
   const [projects, setProjects]   = useState([]);
@@ -112,11 +113,11 @@ export default function DashboardPage() {
             <RoleBadge role={user?.systemRole} size="xs" />
           </div>
         </div>
-        <RoleGate roles={['project_manager']}>
+        {canCreateProject && (
           <Link to={ROUTES.PROJECTS}>
             <Button size="sm" leftIcon={<Plus size={13} />}>New Project</Button>
           </Link>
-        </RoleGate>
+        )}
       </div>
 
       {/* Stats */}
@@ -250,7 +251,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Quick actions — Admin/PM only */}
-          <RoleGate roles={['project_manager']}>
+          {canCreateProject && (
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/70 dark:border-gray-800 overflow-hidden">
               <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100 dark:border-gray-800">
                 <BarChart2 size={13} className="text-gray-400" />
@@ -269,7 +270,7 @@ export default function DashboardPage() {
                 ))}
               </div>
             </div>
-          </RoleGate>
+          )}
         </div>
       </div>
     </div>

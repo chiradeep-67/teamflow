@@ -18,7 +18,17 @@ require('./models/Invitation');
 const app = express();
 
 /* ─── Middleware ─── */
-app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
+app.use(cors({
+  origin: (origin, cb) => {
+    // Allow any localhost origin in dev, or the configured CLIENT_URL in prod
+    if (!origin || /^http:\/\/localhost(:\d+)?$/.test(origin) || origin === process.env.CLIENT_URL) {
+      cb(null, true);
+    } else {
+      cb(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+}));
 app.use(express.json());
 app.use(morgan('dev'));
 
