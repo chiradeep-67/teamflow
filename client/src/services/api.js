@@ -29,18 +29,21 @@ api.interceptors.response.use(
 
 /* ─── Auth ─── */
 export const authAPI = {
-  setup:    ()     => api.get('/auth/setup'),
-  register: (data) => api.post('/auth/register', data),
-  login:    (data) => api.post('/auth/login', data),
-  me:       ()     => api.get('/auth/me'),
+  setup:          ()     => api.get('/auth/setup'),
+  register:       (data) => api.post('/auth/register', data),
+  login:          (data) => api.post('/auth/login', data),
+  me:             ()     => api.get('/auth/me'),
+  changePassword: (data) => api.post('/auth/change-password', data),
 };
 
 /* ─── Users ─── */
 export const usersAPI = {
   getAll:     ()         => api.get('/users'),
   getById:    (id)       => api.get(`/users/${id}`),
+  create:     (data)     => api.post('/users', data),
   update:     (id, data) => api.put(`/users/${id}`, data),
   updateRole: (id, role) => api.put(`/users/${id}/role`, { systemRole: role }),
+  deactivate: (id)       => api.delete(`/users/${id}`),
 };
 
 /* ─── Projects ─── */

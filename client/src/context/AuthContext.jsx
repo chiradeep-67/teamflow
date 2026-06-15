@@ -11,9 +11,9 @@ export function AuthProvider({ children }) {
     try { return JSON.parse(localStorage.getItem(USER_KEY)) || null; }
     catch { return null; }
   });
-  const [workspace, setWorkspace] = useState(null);
+  const [workspace, setWorkspace]       = useState(null);
   const [workspaceLoaded, setWorkspaceLoaded] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading]       = useState(false);
 
   /* On mount: verify stored token + load workspace */
   useEffect(() => {
@@ -46,7 +46,6 @@ export function AuthProvider({ children }) {
     localStorage.setItem(TOKEN_KEY, token);
     localStorage.setItem(USER_KEY, JSON.stringify(userData));
     setUser(userData);
-    /* Reload workspace after login */
     workspaceAPI.get()
       .then(res => setWorkspace(res.data.workspace))
       .catch(() => setWorkspace(null));
@@ -58,31 +57,44 @@ export function AuthProvider({ children }) {
     try {
       const { data } = await authAPI.login({ email, password });
       _persist(data.token, data.user);
-      return { success: true };
+      return {
+        success:            true,
+        mustChangePassword: data.user.mustChangePassword,
+      };
     } catch (err) {
-      const msg = err.response?.data?.message || 'Login failed. Please try again.';
-      return { success: false, error: msg };
+      return { success: false, error: err.response?.data?.message || 'Login failed. Please try again.' };
     } finally {
       setIsLoading(false);
     }
   };
 
-  /* ─── Register ─── */
-  const register = async ({ name, email, password, phone, companyName, inviteToken }) => {
+  /* ─── Register (invite flow only) ─── */
+  const register = async ({ name, email, password, phone, inviteToken }) => {
     setIsLoading(true);
     try {
       const payload = { name, email, password };
       if (phone)       payload.phone       = phone;
-      if (companyName) payload.companyName = companyName;
       if (inviteToken) payload.inviteToken = inviteToken;
       const { data } = await authAPI.register(payload);
       _persist(data.token, data.user);
-      /* Store company name so onboarding can pre-fill workspace name */
-      if (data.companyName) localStorage.setItem('tf_company', data.companyName);
       return { success: true, user: data.user };
     } catch (err) {
-      const msg = err.response?.data?.message || 'Registration failed. Please try again.';
-      return { success: false, error: msg };
+      return { success: false, error: err.response?.data?.message || 'Registration failed.' };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /* ─── Change password ─── */
+  const changePassword = async ({ currentPassword, newPassword }) => {
+    setIsLoading(true);
+    try {
+      const { data } = await authAPI.changePassword({ currentPassword, newPassword });
+      // Re-persist with fresh token + cleared mustChangePassword flag
+      _persist(data.token, data.user);
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.response?.data?.message || 'Failed to change password.' };
     } finally {
       setIsLoading(false);
     }
@@ -96,7 +108,7 @@ export function AuthProvider({ children }) {
     setWorkspace(null);
   };
 
-  /* ─── Project helpers (API-backed) ─── */
+  /* ─── Project helpers ─── */
   const getAccessibleProjects = useCallback(async () => {
     try {
       const { data } = await projectsAPI.getAll();
@@ -106,11 +118,9 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  /* Get the current user's role within a specific project */
   const getProjectRole = useCallback((project) => {
     if (!user) return null;
-    /* Owner and Admin have full access to every project */
-    if (['owner', 'admin'].includes(user.systemRole)) return 'admin';
+    if (user.systemRole === 'admin') return 'admin';
     if (!project?.members) return null;
     const member = project.members.find(
       m => (m.user?._id || m.user) === user.id
@@ -118,7 +128,11 @@ export function AuthProvider({ children }) {
     return member?.projectRole ?? null;
   }, [user]);
 
-  const isOwnerOrAdmin = ['owner', 'admin'].includes(user?.systemRole);
+  const isAdmin        = user?.systemRole === 'admin';
+  const isPMOrAbove    = ['admin', 'project_manager'].includes(user?.systemRole);
+  const isTLOrAbove    = ['admin', 'project_manager', 'team_lead'].includes(user?.systemRole);
+  // keep isOwnerOrAdmin as alias so existing components don't break
+  const isOwnerOrAdmin = isAdmin;
 
   return (
     <AuthContext.Provider value={{
@@ -126,10 +140,14 @@ export function AuthProvider({ children }) {
       workspace,
       setWorkspace,
       workspaceLoaded,
+      isAdmin,
       isOwnerOrAdmin,
+      isPMOrAbove,
+      isTLOrAbove,
       isLoading,
       login,
       register,
+      changePassword,
       logout,
       getAccessibleProjects,
       getProjectRole,

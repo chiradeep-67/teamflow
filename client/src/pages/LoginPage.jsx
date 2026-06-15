@@ -39,8 +39,15 @@ export default function LoginPage() {
     if (Object.keys(e).length) { setErrors(e); return; }
     setErrors({});
     const result = await login(form);
-    if (result.success) navigate(ROUTES.DASHBOARD);
-    else setServerError(result.error);
+    if (result.success) {
+      if (result.mustChangePassword) {
+        navigate(ROUTES.CHANGE_PASSWORD);
+      } else {
+        navigate(ROUTES.DASHBOARD);
+      }
+    } else {
+      setServerError(result.error);
+    }
   };
 
   return (
@@ -120,8 +127,7 @@ export default function LoginPage() {
               }
             </button>
             <span className="text-sm text-gray-500 dark:text-gray-400">
-              No account?{' '}
-              <Link to={ROUTES.REGISTER} className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline">Sign up</Link>
+              Access via invite link only
             </span>
           </div>
         </div>
@@ -178,10 +184,7 @@ export default function LoginPage() {
             </form>
 
             <p className="mt-6 text-center text-xs text-gray-400 dark:text-gray-600">
-              Don&apos;t have an account?{' '}
-              <Link to={ROUTES.REGISTER} className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline">
-                Create one free
-              </Link>
+              New members join via invite link shared by their Admin.
             </p>
           </div>
         </div>

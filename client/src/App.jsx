@@ -2,26 +2,30 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppSidebar } from './components/layout/AppSidebar';
-import LandingPage       from './pages/LandingPage';
-import LoginPage         from './pages/LoginPage';
-import RegisterPage      from './pages/RegisterPage';
-import OnboardingPage    from './pages/OnboardingPage';
-import DashboardPage     from './pages/DashboardPage';
-import ProjectsPage      from './pages/ProjectsPage';
-import ProjectDetailPage from './pages/ProjectDetailPage';
-import ProfilePage       from './pages/ProfilePage';
-import TeamPage          from './pages/TeamPage';
-import { ROUTES }        from './utils/constants';
+import LandingPage         from './pages/LandingPage';
+import LoginPage           from './pages/LoginPage';
+import RegisterPage        from './pages/RegisterPage';
+import ChangePasswordPage  from './pages/ChangePasswordPage';
+import DashboardPage       from './pages/DashboardPage';
+import ProjectsPage        from './pages/ProjectsPage';
+import ProjectDetailPage   from './pages/ProjectDetailPage';
+import ProfilePage         from './pages/ProfilePage';
+import TeamPage            from './pages/TeamPage';
+import { ROUTES }          from './utils/constants';
 
-/* ─── Route guards ─── */
+/* ─── Route guards ─────────────────────────────────────────────────────── */
+
 function ProtectedLayout() {
-  const { user, workspace, workspaceLoaded } = useAuth();
+  const { user, workspaceLoaded } = useAuth();
+
+  if (!workspaceLoaded) return null; // wait for workspace fetch
   if (!user) return <Navigate to={ROUTES.LOGIN} replace />;
-  /* Any authenticated user without a workspace → onboarding
-     (covers the case where onboarding was skipped or workspace was deleted) */
-  if (workspaceLoaded && !workspace) {
-    return <Navigate to="/onboarding" replace />;
+
+  // If user must change password, send them there regardless of URL
+  if (user.mustChangePassword) {
+    return <Navigate to={ROUTES.CHANGE_PASSWORD} replace />;
   }
+
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-950 overflow-hidden">
       <AppSidebar />
@@ -44,7 +48,7 @@ function RequireAuth({ children }) {
   return children;
 }
 
-/* ─── Placeholder pages ─── */
+/* ─── Placeholder pages ─────────────────────────────────────────────────── */
 function ComingSoon({ title }) {
   return (
     <div className="flex flex-col items-center justify-center h-full p-12 text-center">
@@ -57,7 +61,7 @@ function ComingSoon({ title }) {
   );
 }
 
-/* ─── App ─── */
+/* ─── App ──────────────────────────────────────────────────────────────── */
 export default function App() {
   return (
     <BrowserRouter>
@@ -68,14 +72,12 @@ export default function App() {
               {/* Public */}
               <Route path={ROUTES.HOME}     element={<PublicRoute><LandingPage /></PublicRoute>} />
               <Route path={ROUTES.LOGIN}    element={<PublicRoute><LoginPage /></PublicRoute>} />
-              <Route path={ROUTES.REGISTER} element={<PublicRoute><RegisterPage /></PublicRoute>} />
+              <Route path={ROUTES.REGISTER} element={<RegisterPage />} />
 
-              {/* Onboarding — auth required, no sidebar */}
+              {/* Force-change-password — auth required, no sidebar */}
               <Route
-                path="/onboarding"
-                element={
-                  <RequireAuth><OnboardingPage /></RequireAuth>
-                }
+                path={ROUTES.CHANGE_PASSWORD}
+                element={<RequireAuth><ChangePasswordPage /></RequireAuth>}
               />
 
               {/* Protected — all share the sidebar layout */}

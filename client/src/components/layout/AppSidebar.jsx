@@ -34,12 +34,12 @@ function UserAvatar({ user, size = 'md' }) {
 }
 
 const NAV_ITEMS = [
-  { label: 'Dashboard',  icon: LayoutDashboard, href: ROUTES.DASHBOARD, roles: null },
-  { label: 'Projects',   icon: FolderKanban,    href: ROUTES.PROJECTS,  roles: null },
-  { label: 'Board',      icon: LayoutGrid,       href: ROUTES.BOARD,    roles: null },
-  { label: 'Team',       icon: Users,            href: ROUTES.TEAM,     roles: ['owner', 'admin', 'project_manager'] },
-  { label: 'Reports',    icon: BarChart3,        href: ROUTES.REPORTS,  roles: ['owner', 'admin', 'project_manager', 'team_lead'] },
-  { label: 'Settings',   icon: Settings,         href: ROUTES.SETTINGS, roles: ['owner', 'admin'] },
+  { label: 'Dashboard', icon: LayoutDashboard, href: ROUTES.DASHBOARD, roles: null },
+  { label: 'Projects',  icon: FolderKanban,    href: ROUTES.PROJECTS,  roles: null },
+  { label: 'Board',     icon: LayoutGrid,      href: ROUTES.BOARD,     roles: null },
+  { label: 'Team',      icon: Users,           href: ROUTES.TEAM,      roles: ['admin', 'project_manager'] },
+  { label: 'Reports',   icon: BarChart3,       href: ROUTES.REPORTS,   roles: ['admin', 'project_manager', 'team_lead'] },
+  { label: 'Settings',  icon: Settings,        href: ROUTES.SETTINGS,  roles: ['admin'] },
 ];
 
 function NavItem({ item, collapsed }) {
