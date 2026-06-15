@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  User, Mail, Briefcase, Building, LogOut, Save, Shield, Check, Loader2,
+  User, Mail, Briefcase, Building, LogOut, Save, Shield, Check, Loader2, Lock, Eye, EyeOff,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -24,7 +24,7 @@ function UserAvatar({ user }) {
 }
 
 export default function ProfilePage() {
-  const { user, logout } = useAuth();
+  const { user, logout, changePassword, isLoading: authLoading } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
@@ -42,6 +42,11 @@ export default function ProfilePage() {
   });
 
   const [stats, setStats] = useState({ projects: 0, tasks: 0, done: 0 });
+
+  const [pwForm, setPwForm]   = useState({ current: '', next: '', confirm: '' });
+  const [showPw, setShowPw]   = useState({ current: false, next: false, confirm: false });
+  const [pwError, setPwError] = useState('');
+  const [pwSaved, setPwSaved] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -90,6 +95,23 @@ export default function ProfilePage() {
   };
 
   const handleLogout = () => { logout(); navigate(ROUTES.LOGIN); };
+
+  const handlePwSubmit = async (e) => {
+    e.preventDefault();
+    setPwError('');
+    if (!pwForm.current)                        { setPwError('Enter your current password'); return; }
+    if (pwForm.next.length < 8)                 { setPwError('New password must be at least 8 characters'); return; }
+    if (pwForm.next !== pwForm.confirm)          { setPwError('Passwords do not match'); return; }
+    if (pwForm.current === pwForm.next)          { setPwError('New password must differ from current'); return; }
+    const result = await changePassword({ currentPassword: pwForm.current, newPassword: pwForm.next });
+    if (result.success) {
+      setPwForm({ current: '', next: '', confirm: '' });
+      setPwSaved(true);
+      setTimeout(() => setPwSaved(false), 3000);
+    } else {
+      setPwError(result.error);
+    }
+  };
 
   const TABS = ['Profile', 'Security', 'Preferences'];
 
@@ -193,15 +215,47 @@ export default function ProfilePage() {
               <div className="flex items-start gap-3 p-3 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 rounded-xl">
                 <Shield size={15} className="text-indigo-600 dark:text-indigo-400 mt-0.5 shrink-0" />
                 <p className="text-xs text-indigo-700 dark:text-indigo-300 leading-relaxed">
-                  Your system role is <strong>{user?.systemRole}</strong>. Roles are assigned by your organisation&apos;s Admin and control what you can see and do across the workspace.
+                  Your role is <strong>{user?.systemRole?.replace(/_/g,' ')}</strong>. Roles are assigned by your Admin and control what you can see and do.
                 </p>
               </div>
-              <div className="space-y-4">
-                <Input label="Current password" type="password" placeholder="••••••••" leftIcon={<Shield size={14} />} />
-                <Input label="New password" type="password" placeholder="Min. 8 characters" leftIcon={<Shield size={14} />} />
-                <Input label="Confirm new password" type="password" placeholder="Repeat new password" leftIcon={<Shield size={14} />} />
+
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">Change password</p>
+
+              {pwError && (
+                <div className="p-3 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200/70 dark:border-red-500/20 text-red-600 dark:text-red-400 text-sm">
+                  {pwError}
+                </div>
+              )}
+              {pwSaved && (
+                <div className="p-3 rounded-xl bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 text-green-700 dark:text-green-400 text-sm flex items-center gap-2">
+                  <Check size={14}/> Password updated successfully
+                </div>
+              )}
+
+              <form onSubmit={handlePwSubmit} className="space-y-4">
+                <Input label="Current password" type={showPw.current ? 'text' : 'password'} placeholder="••••••••"
+                  value={pwForm.current} onChange={e => setPwForm(f => ({ ...f, current: e.target.value }))}
+                  leftIcon={<Lock size={14}/>}
+                  rightIcon={<button type="button" onClick={() => setShowPw(s => ({...s, current: !s.current}))} tabIndex={-1} className="hover:text-gray-700 dark:hover:text-gray-300">{showPw.current ? <EyeOff size={14}/> : <Eye size={14}/>}</button>} />
+                <Input label="New password" type={showPw.next ? 'text' : 'password'} placeholder="Min. 8 characters"
+                  value={pwForm.next} onChange={e => setPwForm(f => ({ ...f, next: e.target.value }))}
+                  leftIcon={<Lock size={14}/>}
+                  rightIcon={<button type="button" onClick={() => setShowPw(s => ({...s, next: !s.next}))} tabIndex={-1} className="hover:text-gray-700 dark:hover:text-gray-300">{showPw.next ? <EyeOff size={14}/> : <Eye size={14}/>}</button>} />
+                <Input label="Confirm new password" type={showPw.confirm ? 'text' : 'password'} placeholder="Repeat new password"
+                  value={pwForm.confirm} onChange={e => setPwForm(f => ({ ...f, confirm: e.target.value }))}
+                  leftIcon={<Lock size={14}/>}
+                  rightIcon={<button type="button" onClick={() => setShowPw(s => ({...s, confirm: !s.confirm}))} tabIndex={-1} className="hover:text-gray-700 dark:hover:text-gray-300">{showPw.confirm ? <EyeOff size={14}/> : <Eye size={14}/>}</button>} />
+                <Button type="submit" size="sm" isLoading={authLoading}
+                  leftIcon={pwSaved ? <Check size={13}/> : <Lock size={13}/>}>
+                  {pwSaved ? 'Password updated!' : 'Update password'}
+                </Button>
+              </form>
+
+              <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
+                <p className="text-xs text-gray-400 dark:text-gray-600">
+                  Forgot your password? Contact your workspace Admin to have it reset.
+                </p>
               </div>
-              <Button size="sm">Update password</Button>
             </div>
           )}
 

@@ -21,11 +21,6 @@ function ProtectedLayout() {
   if (!workspaceLoaded) return null; // wait for workspace fetch
   if (!user) return <Navigate to={ROUTES.LOGIN} replace />;
 
-  // If user must change password, send them there regardless of URL
-  if (user.mustChangePassword) {
-    return <Navigate to={ROUTES.CHANGE_PASSWORD} replace />;
-  }
-
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-950 overflow-hidden">
       <AppSidebar />

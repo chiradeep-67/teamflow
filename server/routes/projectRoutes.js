@@ -22,8 +22,17 @@ router.get('/', async (req, res) => {
   }
 });
 
-/* ── POST /api/projects — Admin or PM ────────────────────────────────────── */
-router.post('/', requireRole('project_manager'), async (req, res) => {
+/* ── POST /api/projects — PM only (admin can view/edit/delete but NOT create) */
+router.post('/', async (req, res) => {
+  // Admin manages people, not projects — only PMs create projects
+  if (req.user.systemRole !== 'project_manager') {
+    return res.status(403).json({
+      success: false,
+      message: req.user.systemRole === 'admin'
+        ? 'Admins cannot create projects. Assign a Project Manager — they create and own projects.'
+        : 'Only Project Managers can create projects.',
+    });
+  }
   try {
     const project = await Project.create({
       ...req.body,

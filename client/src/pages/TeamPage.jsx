@@ -1,15 +1,21 @@
 import { useState, useEffect } from 'react';
 import {
   Users, UserPlus, Mail, Search, Copy, Check,
-  X, Loader2, Trash2, ChevronDown, KeyRound, UserCog,
+  X, Loader2, Trash2, ChevronDown, KeyRound, UserCog, RefreshCw,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { RoleBadge } from '../components/common/RoleBadge';
 import { Button } from '../components/ui/Button';
 import { Input }  from '../components/ui/Input';
-import { usersAPI, invitesAPI, workspaceAPI } from '../services/api';
+import { usersAPI, invitesAPI } from '../services/api';
 import { ROLE_LABELS } from '../utils/permissions';
 import { cn } from '../utils/cn';
+
+const SPECIALTIES = [
+  'Frontend', 'Backend', 'Full Stack', 'Mobile',
+  'Design / UI', 'QA / Testing', 'DevOps', 'Data / Analytics',
+  'Management', 'Other',
+];
 
 /* Roles an admin can assign directly */
 const DIRECT_ROLES  = ['project_manager', 'team_lead', 'member'];
@@ -25,11 +31,11 @@ const AVATAR_BG = [
 const avatarBg = (name = '') => AVATAR_BG[name.charCodeAt(0) % AVATAR_BG.length];
 const initials  = (name = '') => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2) || '?';
 
-/* ─── Temp-password display card ─────────────────────────────────────────── */
-function TempPasswordCard({ name, email, tempPassword, onClose }) {
+/* ─── Credentials display card ───────────────────────────────────────────── */
+function TempPasswordCard({ name, email, tempPassword, emailSent, onClose }) {
   const [copied, setCopied] = useState(false);
   const copyAll = () => {
-    navigator.clipboard.writeText(`Email: ${email}\nTemp password: ${tempPassword}`);
+    navigator.clipboard.writeText(`Email: ${email}\nPassword: ${tempPassword}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -41,7 +47,9 @@ function TempPasswordCard({ name, email, tempPassword, onClose }) {
         </div>
         <p className="text-sm font-semibold text-gray-900 dark:text-white">{name} added!</p>
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          Share these credentials. They'll be asked to change the password on first login.
+          {emailSent
+            ? 'Login credentials have been emailed to them.'
+            : 'Email not configured — share these credentials manually.'}
         </p>
       </div>
 
@@ -81,7 +89,7 @@ function AddMemberModal({ departments, allowedRoles, onClose, onAdded }) {
     setSaving(true); setError('');
     try {
       const { data } = await usersAPI.create(form);
-      setResult({ name: data.user.name, email: data.user.email, tempPassword: data.tempPassword });
+      setResult({ name: data.user.name, email: data.user.email, tempPassword: data.tempPassword, emailSent: data.emailSent });
       onAdded?.();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create member');
@@ -123,8 +131,15 @@ function AddMemberModal({ departments, allowedRoles, onClose, onAdded }) {
               <div className="col-span-2 sm:col-span-1">
                 <Input label="Phone" type="tel" placeholder="+91 98765 43210" value={form.phone} onChange={field('phone')} hint="Optional" />
               </div>
-              <div className="col-span-2 sm:col-span-1">
-                <Input label="Job title" placeholder="e.g. Frontend Dev" value={form.title} onChange={field('title')} hint="Optional" />
+              <div className="col-span-2 sm:col-span-1 flex flex-col gap-1.5">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Specialty <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <select value={form.title} onChange={field('title')}
+                  className="h-10 rounded-lg text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all">
+                  <option value="">Select specialty</option>
+                  {SPECIALTIES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
               </div>
             </div>
 
@@ -320,6 +335,81 @@ function RoleDropdown({ userId, currentRole, onRoleChange }) {
   );
 }
 
+/* ─── Reset Password confirmation mini-modal ─────────────────────────────── */
+function ResetPasswordModal({ member, onClose, onReset }) {
+  const [loading, setLoading] = useState(false);
+  const [result,  setResult]  = useState(null);
+  const [copied,  setCopied]  = useState(false);
+
+  const handleReset = async () => {
+    setLoading(true);
+    try {
+      const { data } = await usersAPI.resetPassword(member._id);
+      setResult(data);
+      onReset?.();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to reset password');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copy = () => {
+    navigator.clipboard.writeText(result.newPassword);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+      <div className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm" onClick={!result ? onClose : undefined} />
+      <div className="relative w-full max-w-sm bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/70 dark:border-gray-700 shadow-xl overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <RefreshCw size={14} className="text-amber-500" /> Reset Password
+          </h2>
+          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"><X size={15}/></button>
+        </div>
+
+        {!result ? (
+          <div className="p-6 space-y-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Generate a new temporary password for <strong className="text-gray-900 dark:text-white">{member.name}</strong>?
+              {process.env.NODE_ENV !== 'test' && ' It will be emailed to them.'}
+            </p>
+            <div className="flex gap-2">
+              <Button variant="secondary" fullWidth onClick={onClose}>Cancel</Button>
+              <Button fullWidth isLoading={loading} onClick={handleReset} leftIcon={<RefreshCw size={13}/>}>
+                Reset password
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="p-6 space-y-4">
+            <div className="flex flex-col items-center text-center py-1">
+              <div className="w-11 h-11 rounded-full bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center mb-3">
+                <RefreshCw size={18} className="text-amber-600 dark:text-amber-400" />
+              </div>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">Password reset!</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {result.emailSent ? 'New credentials emailed to the member.' : 'Email not configured — share this password manually.'}
+              </p>
+            </div>
+            <div className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20">
+              <span className="font-mono font-bold text-amber-700 dark:text-amber-400 text-sm">{result.newPassword}</span>
+              <button onClick={copy} className={cn('px-2.5 py-1 rounded-lg text-xs font-medium transition-all',
+                copied ? 'bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600')}>
+                {copied ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+            <Button fullWidth onClick={onClose}>Done</Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ─── Page ───────────────────────────────────────────────────────────────── */
 export default function TeamPage() {
   const { user, workspace, isAdmin, isPMOrAbove } = useAuth();
@@ -332,6 +422,7 @@ export default function TeamPage() {
   const [deptFilter, setDeptFilter] = useState('all');
   const [activeTab, setActiveTab]   = useState('members');
   const [modal, setModal]           = useState(null); // null | 'add' | 'invite'
+  const [resetTarget, setResetTarget] = useState(null);
 
   const departments = workspace?.departments ?? [];
 
@@ -448,7 +539,7 @@ export default function TeamPage() {
               <Loader2 size={24} className="animate-spin text-indigo-500" />
             </div>
           ) : (
-            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/70 dark:border-gray-800 overflow-hidden">
+                      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/70 dark:border-gray-800 overflow-hidden">
               <div className="grid grid-cols-[1fr_auto_auto_auto] sm:grid-cols-[2fr_1fr_1fr_auto] gap-4 px-5 py-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
                 <span>Member</span>
                 <span className="hidden sm:block">Department</span>
@@ -473,12 +564,9 @@ export default function TeamPage() {
                           <div className="flex items-center gap-1.5">
                             <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{member.name}</p>
                             {member._id === user?.id && <span className="text-[10px] text-indigo-500 font-medium">(you)</span>}
-                            {member.mustChangePassword && (
-                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium">pw change pending</span>
-                            )}
                           </div>
                           <p className="text-xs text-gray-400 dark:text-gray-600 truncate">{member.email}</p>
-                          {member.title && <p className="text-[11px] text-gray-400 dark:text-gray-600 truncate">{member.title}</p>}
+                          {member.title && <p className="text-[11px] text-indigo-400 dark:text-indigo-500 truncate">{member.title}</p>}
                         </div>
                       </div>
 
@@ -494,7 +582,19 @@ export default function TeamPage() {
                         )}
                       </div>
 
-                      <div className="w-6" />
+                      {/* Reset password — admin only, not for self or other admins */}
+                      <div>
+                        {isAdmin && member._id !== user?.id && member.systemRole !== 'admin' ? (
+                          <button
+                            onClick={() => setResetTarget(member)}
+                            title="Reset password"
+                            className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-all">
+                            <RefreshCw size={13} />
+                          </button>
+                        ) : (
+                          <div className="w-7" />
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -556,6 +656,13 @@ export default function TeamPage() {
           allowedRoles={allowedInviteRoles}
           onClose={() => setModal(null)}
           onInvited={refreshInvites}
+        />
+      )}
+      {resetTarget && (
+        <ResetPasswordModal
+          member={resetTarget}
+          onClose={() => setResetTarget(null)}
+          onReset={() => {}}
         />
       )}
     </div>

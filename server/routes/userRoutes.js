@@ -2,8 +2,10 @@ const express = require('express');
 const router  = express.Router();
 const crypto  = require('crypto');
 const User    = require('../models/User');
+const Workspace = require('../models/Workspace');
 const { protect } = require('../middleware/auth');
 const { requireRole } = require('../middleware/checkRole');
+const { sendCredentialsEmail, sendPasswordResetEmail } = require('../utils/email');
 
 router.use(protect);
 
@@ -53,19 +55,29 @@ router.post('/', requireRole('admin', 'project_manager'), async (req, res) => {
 
     const user = await User.create({
       name,
-      email:              email.toLowerCase(),
-      password:           tempPassword,   // pre-save hook hashes it
-      phone:              phone      || '',
-      systemRole:         systemRole || 'member',
-      department:         department || '',
-      title:              title      || '',
-      organizationId:     req.user.organizationId,
-      mustChangePassword: true,
-      isActive:           true,
+      email:          email.toLowerCase(),
+      password:       tempPassword,       // pre-save hook hashes it
+      phone:          phone      || '',
+      systemRole:     systemRole || 'member',
+      department:     department || '',
+      title:          title      || '',
+      organizationId: req.user.organizationId,
+      isActive:       true,
     });
 
+    // Send credentials email (non-blocking)
+    const workspace = await Workspace.findOne({ organizationId: req.user.organizationId }).select('name');
+    sendCredentialsEmail({
+      to:            user.email,
+      name:          user.name,
+      role:          user.systemRole,
+      workspaceName: workspace?.name || 'TeamFlow',
+      tempPassword,
+      loginUrl:      `${process.env.CLIENT_URL}/login`,
+    }).catch(err => console.error('📧 Credentials email failed:', err.message));
+
     res.status(201).json({
-      success:     true,
+      success: true,
       user: {
         id:         user._id,
         name:       user.name,
@@ -75,9 +87,9 @@ router.post('/', requireRole('admin', 'project_manager'), async (req, res) => {
         title:      user.title,
         phone:      user.phone,
       },
-      // Show the temp password once — admin must share it with the new user
       tempPassword,
-      note: 'Share this temporary password with the user. They will be required to change it on first login.',
+      emailSent: !!(process.env.EMAIL_USER && process.env.EMAIL_PASS),
+      note: 'Credentials have been emailed to the user.',
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -139,6 +151,45 @@ router.put('/:id/role', requireRole('admin'), async (req, res) => {
     ).select('-password');
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
     res.json({ success: true, user });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+/* ── POST /api/users/:id/reset-password — Admin resets a member's password ─
+ * Generates a new temp password, updates it in DB, and emails the member.     */
+router.post('/:id/reset-password', requireRole('admin'), async (req, res) => {
+  try {
+    if (req.params.id === req.user._id.toString()) {
+      return res.status(400).json({ success: false, message: 'Use the change-password endpoint to update your own password' });
+    }
+
+    const target = await User.findOne({
+      _id:            req.params.id,
+      organizationId: req.user.organizationId,
+    }).select('+password');
+    if (!target) return res.status(404).json({ success: false, message: 'User not found' });
+
+    const newPassword = 'TF-' + crypto.randomBytes(4).toString('hex').toUpperCase();
+    target.password = newPassword; // pre-save hook hashes it
+    await target.save();
+
+    // Email new credentials (non-blocking)
+    const workspace = await Workspace.findOne({ organizationId: req.user.organizationId }).select('name');
+    sendPasswordResetEmail({
+      to:            target.email,
+      name:          target.name,
+      workspaceName: workspace?.name || 'TeamFlow',
+      newPassword,
+      loginUrl:      `${process.env.CLIENT_URL}/login`,
+    }).catch(err => console.error('📧 Reset email failed:', err.message));
+
+    res.json({
+      success:      true,
+      newPassword,  // show once in UI
+      emailSent:    !!(process.env.EMAIL_USER && process.env.EMAIL_PASS),
+      message:      `Password reset for ${target.name}`,
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

@@ -46,7 +46,7 @@ export default function ChangePasswordPage() {
   const [errors, setErrors]         = useState({});
   const [serverError, setServerError] = useState('');
 
-  const isForced = user?.mustChangePassword;
+  const isForced = false; // password changes are always voluntary
 
   const validate = () => {
     const e = {};

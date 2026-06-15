@@ -39,15 +39,8 @@ export default function LoginPage() {
     if (Object.keys(e).length) { setErrors(e); return; }
     setErrors({});
     const result = await login(form);
-    if (result.success) {
-      if (result.mustChangePassword) {
-        navigate(ROUTES.CHANGE_PASSWORD);
-      } else {
-        navigate(ROUTES.DASHBOARD);
-      }
-    } else {
-      setServerError(result.error);
-    }
+    if (result.success) navigate(ROUTES.DASHBOARD);
+    else setServerError(result.error);
   };
 
   return (
@@ -160,7 +153,7 @@ export default function LoginPage() {
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
-                  <a href="#" className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">Forgot?</a>
+                  <span className="text-xs text-gray-400 dark:text-gray-600">Forgot? Ask your admin to reset it</span>
                 </div>
                 <Input
                   type={showPassword ? 'text' : 'password'}

@@ -82,7 +82,7 @@ async function seed() {
       password,
       organizationId:     org._id,
       systemRole:         'admin',
-      mustChangePassword: true,
+      mustChangePassword: false,   // admin credentials are set directly by the developer
       isActive:           true,
     });
     await admin.save();
@@ -114,7 +114,7 @@ async function seed() {
     console.log(`  Admin email   ${bold(email)}`);
     console.log(`  Temp password ${bold(password)}`);
     console.log('─'.repeat(52));
-    console.log(yellow('  ⚠  Admin will be forced to change password on first login.'));
+    console.log(dim('  Admin can log in directly with the credentials above.'));
     console.log('─'.repeat(52) + '\n');
 
   } catch (err) {

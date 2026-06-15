@@ -43,7 +43,8 @@ export const usersAPI = {
   create:     (data)     => api.post('/users', data),
   update:     (id, data) => api.put(`/users/${id}`, data),
   updateRole: (id, role) => api.put(`/users/${id}/role`, { systemRole: role }),
-  deactivate: (id)       => api.delete(`/users/${id}`),
+  deactivate:    (id)    => api.delete(`/users/${id}`),
+  resetPassword: (id)    => api.post(`/users/${id}/reset-password`),
 };
 
 /* ─── Projects ─── */
