@@ -215,7 +215,7 @@ export default function ProfilePage() {
               <div className="flex items-start gap-3 p-3 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 rounded-xl">
                 <Shield size={15} className="text-indigo-600 dark:text-indigo-400 mt-0.5 shrink-0" />
                 <p className="text-xs text-indigo-700 dark:text-indigo-300 leading-relaxed">
-                  Your role is <strong>{user?.systemRole?.replace(/_/g,' ')}</strong>. Roles are assigned by your Admin and control what you can see and do.
+                  You are logged in as <strong className="capitalize">{user?.systemRole?.replace(/_/g,' ')}</strong>. Your role controls what you can see and do across the workspace.
                 </p>
               </div>
 
