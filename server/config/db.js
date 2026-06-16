@@ -9,6 +9,7 @@ const connectDB = async () => {
     const conn = await mongoose.connect(process.env.MONGO_URI, {
       serverSelectionTimeoutMS: 15000,
       socketTimeoutMS: 45000,
+      family: 4, // Railway egress — avoid IPv6 SRV resolution issues with Atlas
     });
     console.log(`✅ MongoDB connected: ${conn.connection.host}`);
   } catch (error) {
