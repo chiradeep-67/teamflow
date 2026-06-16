@@ -13,7 +13,7 @@ const TaskSchema = new mongoose.Schema({
   organizationId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Organization',
-    required: true,
+    required: false,   // optional for backward-compat with pre-multitenancy data
   },
 
   status:   { type: String, enum: ['todo', 'in_progress', 'in_review', 'done'], default: 'todo' },
