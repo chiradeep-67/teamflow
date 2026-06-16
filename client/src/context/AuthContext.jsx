@@ -68,6 +68,25 @@ export function AuthProvider({ children }) {
     }
   };
 
+  /* ─── Create org (public signup) ─── */
+  const createOrg = async ({ orgName, name, email, password, phone }) => {
+    setIsLoading(true);
+    try {
+      const payload = { orgName, name, email, password };
+      if (phone) payload.phone = phone;
+      const { data } = await authAPI.createOrg(payload);
+      _persist(data.token, data.user);
+      return { success: true, message: data.message };
+    } catch (err) {
+      const msg = err.response?.data?.message
+        || (err.code === 'ERR_NETWORK' ? 'Cannot reach the API — check that the backend is running and VITE_API_URL is set.' : null)
+        || 'Failed to create organisation.';
+      return { success: false, error: msg };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   /* ─── Register (invite flow only) ─── */
   const register = async ({ name, email, password, phone, inviteToken }) => {
     setIsLoading(true);
@@ -147,6 +166,7 @@ export function AuthProvider({ children }) {
       isLoading,
       login,
       register,
+      createOrg,
       changePassword,
       logout,
       getAccessibleProjects,

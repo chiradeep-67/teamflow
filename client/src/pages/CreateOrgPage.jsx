@@ -5,7 +5,6 @@ import {
   ArrowRight, Check, Loader2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { authAPI } from '../services/api';
 import { ROUTES } from '../utils/constants';
 import { cn } from '../utils/cn';
 
@@ -34,7 +33,7 @@ function StrengthBar({ password }) {
 
 export default function CreateOrgPage() {
   const navigate = useNavigate();
-  const { _persist } = useAuth();
+  const { createOrg } = useAuth();
 
   const [step, setStep]       = useState(0);  // 0 = org info, 1 = admin info
   const [loading, setLoading] = useState(false);
@@ -77,19 +76,13 @@ export default function CreateOrgPage() {
     if (!validateStep1()) return;
 
     setLoading(true);
-    try {
-      const { data } = await authAPI.createOrg(form);
-      // Auto-login — persist token + user then go to dashboard
-      if (data.token && data.user) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        setStep(2);
-        setTimeout(() => navigate(ROUTES.DASHBOARD), 1800);
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create organisation. Please try again.');
-    } finally {
-      setLoading(false);
+    const result = await createOrg(form);
+    setLoading(false);
+    if (result.success) {
+      setStep(2);
+      setTimeout(() => navigate(ROUTES.DASHBOARD), 1800);
+    } else {
+      setError(result.error || 'Failed to create organisation. Please try again.');
     }
   };
 

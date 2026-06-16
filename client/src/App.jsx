@@ -12,6 +12,7 @@ import ProjectsPage        from './pages/ProjectsPage';
 import ProjectDetailPage   from './pages/ProjectDetailPage';
 import ProfilePage         from './pages/ProfilePage';
 import TeamPage            from './pages/TeamPage';
+import SettingsPage        from './pages/SettingsPage';
 import { ROUTES }          from './utils/constants';
 
 /* ─── Route guards ─────────────────────────────────────────────────────── */
@@ -85,7 +86,7 @@ export default function App() {
                 <Route path={ROUTES.BOARD}     element={<ComingSoon title="Workspace Board" />} />
                 <Route path={ROUTES.TEAM}      element={<TeamPage />} />
                 <Route path={ROUTES.REPORTS}   element={<ComingSoon title="Reports & Analytics" />} />
-                <Route path={ROUTES.SETTINGS}  element={<ComingSoon title="Workspace Settings" />} />
+                <Route path={ROUTES.SETTINGS}  element={<SettingsPage />} />
                 <Route path={ROUTES.PROFILE}   element={<ProfilePage />} />
                 <Route path="/tasks/:id"       element={<ComingSoon title="Task Detail" />} />
               </Route>

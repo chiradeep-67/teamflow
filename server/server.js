@@ -5,7 +5,6 @@ const dotenv  = require('dotenv');
 const connectDB = require('./config/db');
 
 dotenv.config();
-connectDB();
 
 // Pre-load models so Mongoose registers them before any route handler fires
 require('./models/Organization');
@@ -18,14 +17,21 @@ require('./models/Invitation');
 const app = express();
 
 /* ─── Middleware ─── */
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true;
+  if (/^http:\/\/localhost(:\d+)?$/.test(origin)) return true;
+  if (origin === process.env.CLIENT_URL) return true;
+  try {
+    const { hostname } = new URL(origin);
+    if (hostname.endsWith('.vercel.app')) return true;
+  } catch { /* invalid origin */ }
+  return false;
+};
+
 app.use(cors({
   origin: (origin, cb) => {
-    // Allow any localhost origin in dev, or the configured CLIENT_URL in prod
-    if (!origin || /^http:\/\/localhost(:\d+)?$/.test(origin) || origin === process.env.CLIENT_URL) {
-      cb(null, true);
-    } else {
-      cb(new Error('Not allowed by CORS'));
-    }
+    if (isAllowedOrigin(origin)) cb(null, true);
+    else cb(new Error(`Not allowed by CORS: ${origin}`));
   },
   credentials: true,
 }));
@@ -52,4 +58,14 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 TeamFlow API running on port ${PORT}`));
+
+connectDB()
+  .then(() => {
+    app.listen(PORT, '0.0.0.0', () =>
+      console.log(`🚀 TeamFlow API running on port ${PORT}`)
+    );
+  })
+  .catch((err) => {
+    console.error('❌ Server startup failed:', err.message);
+    process.exit(1);
+  });
