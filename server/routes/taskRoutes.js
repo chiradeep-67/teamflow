@@ -24,10 +24,12 @@ router.get('/', requireProjectMember, async (req, res) => {
 /* ── POST /api/projects/:id/tasks — PM or TL ─────────────────────────────── */
 router.post('/', requireProjectRole('project_manager', 'team_lead'), async (req, res) => {
   try {
+    // Use project's organizationId as the definitive source — always correct
+    const orgId = req.project?.organizationId || req.user.organizationId;
     const task = await Task.create({
       ...req.body,
       project:        req.params.id,
-      organizationId: req.user.organizationId,
+      organizationId: orgId,
       createdBy:      req.user._id,
     });
     res.status(201).json({ success: true, task });
@@ -40,9 +42,10 @@ router.post('/', requireProjectRole('project_manager', 'team_lead'), async (req,
  * PM / TL can edit any task.  Member can only edit their own assigned task. */
 router.put('/:taskId', requireProjectMember, async (req, res) => {
   try {
+    const orgId = req.project?.organizationId || req.user.organizationId;
     const task = await Task.findOne({
       _id:            req.params.taskId,
-      organizationId: req.user.organizationId,
+      organizationId: orgId,
     });
     if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
 
