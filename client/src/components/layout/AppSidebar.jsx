@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, FolderKanban, LayoutGrid, Users,
-  BarChart3, Settings, LogOut, Menu, X, Sun, Moon,
-  ChevronRight, Bell,
+  FolderKanban, Users, BarChart3, Settings, LogOut, Menu, X, Sun, Moon,
+  Bell, ChevronDown, LayoutGrid, PieChart,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -33,25 +32,29 @@ function UserAvatar({ user, size = 'md' }) {
   );
 }
 
-const NAV_ITEMS = [
-  { label: 'Dashboard', icon: LayoutDashboard, href: ROUTES.DASHBOARD, roles: null },
-  { label: 'Projects',  icon: FolderKanban,    href: ROUTES.PROJECTS,  roles: null },
-  { label: 'Board',     icon: LayoutGrid,      href: ROUTES.BOARD,     roles: null },
-  { label: 'Team',      icon: Users,           href: ROUTES.TEAM,      roles: ['admin', 'project_manager'] },
-  { label: 'Reports',   icon: BarChart3,       href: ROUTES.REPORTS,   roles: ['admin', 'project_manager', 'team_lead'] },
-  { label: 'Settings',  icon: Settings,        href: ROUTES.SETTINGS,  roles: ['admin'] },
+/* ─── Board dropdown sub-items ─── */
+const BOARD_SUBITEMS = [
+  { label: 'Overview', href: ROUTES.BOARD,    icon: LayoutGrid,  roles: null },
+  { label: 'Reports',  href: ROUTES.REPORTS,  icon: PieChart,    roles: ['admin', 'project_manager', 'team_lead'] },
 ];
 
-function NavItem({ item, collapsed }) {
+/* ─── Other nav items ─── */
+const NAV_ITEMS = [
+  { label: 'Team',     icon: Users,    href: ROUTES.TEAM,     roles: ['admin', 'project_manager'] },
+  { label: 'Settings', icon: Settings, href: ROUTES.SETTINGS, roles: ['admin'] },
+];
+
+function NavItem({ item, collapsed, onClick }) {
   const location = useLocation();
   const isActive = location.pathname === item.href || location.pathname.startsWith(item.href + '/');
 
   return (
     <Link
       to={item.href}
+      onClick={onClick}
       title={collapsed ? item.label : undefined}
       className={cn(
-        'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 group',
+        'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150',
         isActive
           ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
           : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/60 hover:text-gray-900 dark:hover:text-gray-100',
@@ -60,10 +63,78 @@ function NavItem({ item, collapsed }) {
     >
       <item.icon size={17} className="shrink-0" />
       {!collapsed && <span>{item.label}</span>}
-      {!collapsed && isActive && (
-        <ChevronRight size={13} className="ml-auto opacity-50" />
-      )}
     </Link>
+  );
+}
+
+/* ─── Board dropdown ─── */
+function BoardDropdown({ collapsed, onLinkClick, userRole }) {
+  const location = useLocation();
+  const isAnyActive = location.pathname === ROUTES.BOARD
+    || location.pathname.startsWith('/projects')
+    || location.pathname.startsWith('/reports');
+  const [open, setOpen] = useState(isAnyActive);
+
+  const visibleSubs = BOARD_SUBITEMS.filter(
+    s => !s.roles || s.roles.includes(userRole)
+  );
+
+  if (collapsed) {
+    return (
+      <Link to={ROUTES.BOARD} title="Board"
+        className={cn(
+          'flex items-center justify-center px-2 py-2 rounded-lg text-sm font-medium transition-all duration-150',
+          isAnyActive
+            ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
+            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/60 hover:text-gray-900 dark:hover:text-gray-100'
+        )}
+      >
+        <FolderKanban size={17} className="shrink-0" />
+      </Link>
+    );
+  }
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className={cn(
+          'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150',
+          isAnyActive
+            ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
+            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/60 hover:text-gray-900 dark:hover:text-gray-100'
+        )}
+      >
+        <FolderKanban size={17} className="shrink-0" />
+        <span>Board</span>
+        <ChevronDown size={13} className={cn('ml-auto transition-transform duration-200', open && 'rotate-180')} />
+      </button>
+
+      {open && (
+        <div className="mt-0.5 ml-4 pl-3 border-l border-gray-200 dark:border-gray-700 space-y-0.5">
+          {visibleSubs.map(sub => {
+            const isSubActive = location.pathname === sub.href
+              || (sub.href === ROUTES.REPORTS && location.pathname.startsWith('/reports'));
+            return (
+              <Link
+                key={sub.href}
+                to={sub.href}
+                onClick={onLinkClick}
+                className={cn(
+                  'flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-150',
+                  isSubActive
+                    ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800/60'
+                )}
+              >
+                <sub.icon size={13} className="shrink-0" />
+                {sub.label}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -126,6 +197,11 @@ export function AppSidebar() {
         {!collapsed && (
           <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider px-3 mb-2">Navigation</p>
         )}
+
+        {/* Board dropdown — always visible */}
+        <BoardDropdown collapsed={collapsed} onLinkClick={onLinkClick} userRole={user?.systemRole} />
+
+        {/* Other nav items */}
         {visibleItems.map(item => (
           <div key={item.href} onClick={onLinkClick}>
             <NavItem item={item} collapsed={collapsed} />
@@ -135,7 +211,6 @@ export function AppSidebar() {
 
       {/* Bottom: theme + user */}
       <div className={cn('border-t border-gray-100 dark:border-gray-800 p-3 space-y-1')}>
-        {/* Theme toggle */}
         <button
           onClick={toggleTheme}
           className={cn('w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors', collapsed && 'justify-center px-2')}
@@ -144,7 +219,6 @@ export function AppSidebar() {
           {!collapsed && <span>{isDark ? 'Light mode' : 'Dark mode'}</span>}
         </button>
 
-        {/* Logout */}
         <button
           onClick={handleLogout}
           className={cn('w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors', collapsed && 'justify-center px-2')}
@@ -153,7 +227,6 @@ export function AppSidebar() {
           {!collapsed && <span>Sign out</span>}
         </button>
 
-        {/* User card */}
         {!collapsed && (
           <Link
             to={ROUTES.PROFILE}
@@ -187,12 +260,11 @@ export function AppSidebar() {
 
       {/* Mobile: top bar + drawer */}
       <div className="lg:hidden">
-        {/* Mobile top bar */}
         <div className="fixed top-0 left-0 right-0 z-40 flex items-center justify-between h-14 px-4 bg-white dark:bg-gray-900 border-b border-gray-200/70 dark:border-gray-800">
           <button onClick={() => setMobileOpen(true)} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800">
             <Menu size={18} />
           </button>
-          <Link to={ROUTES.DASHBOARD} className="flex items-center gap-2">
+          <Link to={ROUTES.BOARD} className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-md bg-indigo-600 flex items-center justify-center">
               <svg width="11" height="11" viewBox="0 0 30 30" fill="none"><rect x="0" y="2" width="6" height="26" rx="2" fill="white" fillOpacity="0.95"/><rect x="9" y="2" width="6" height="18" rx="2" fill="white" fillOpacity="0.7"/><rect x="18" y="2" width="6" height="11" rx="2" fill="white" fillOpacity="0.5"/></svg>
             </div>
@@ -201,7 +273,6 @@ export function AppSidebar() {
           <UserAvatar user={user} size="sm" />
         </div>
 
-        {/* Drawer */}
         {mobileOpen && (
           <div className="fixed inset-0 z-50 flex">
             <div className="absolute inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />

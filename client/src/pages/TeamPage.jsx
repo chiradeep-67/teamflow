@@ -76,7 +76,7 @@ function TempPasswordCard({ name, email, tempPassword, emailSent, onClose }) {
 }
 
 /* ─── Add Member Modal (direct account creation) ─────────────────────────── */
-function AddMemberModal({ departments, allowedRoles, onClose, onAdded }) {
+function AddMemberModal({ departments, allowedRoles, onClose, onAdded, title = 'Add Member' }) {
   const [form, setForm]   = useState({ name: '', email: '', phone: '', systemRole: allowedRoles[0], department: '', title: '' });
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState(null);
@@ -105,7 +105,7 @@ function AddMemberModal({ departments, allowedRoles, onClose, onAdded }) {
       <div className="relative w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/70 dark:border-gray-700 shadow-xl overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
           <h2 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-            <UserCog size={15} className="text-indigo-500" /> Add Member
+            <UserCog size={15} className="text-indigo-500" /> {title}
           </h2>
           <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
             <X size={15} />
@@ -494,9 +494,15 @@ export default function TeamPage() {
             <Button size="sm" variant="secondary" leftIcon={<Mail size={13}/>} onClick={() => setModal('invite')}>
               Invite via email
             </Button>
-            <Button size="sm" leftIcon={<UserPlus size={13}/>} onClick={() => setModal('add')}>
-              Add member
-            </Button>
+            {isAdmin ? (
+              <Button size="sm" leftIcon={<UserPlus size={13}/>} onClick={() => setModal('add')}>
+                Add member
+              </Button>
+            ) : (
+              <Button size="sm" leftIcon={<UserPlus size={13}/>} onClick={() => setModal('add')}>
+                Assign member
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -652,6 +658,7 @@ export default function TeamPage() {
           allowedRoles={allowedDirectRoles}
           onClose={() => setModal(null)}
           onAdded={refreshMembers}
+          title={isAdmin ? 'Add Member' : 'Assign Member'}
         />
       )}
       {modal === 'invite' && (

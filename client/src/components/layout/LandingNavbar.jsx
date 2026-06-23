@@ -24,7 +24,6 @@ function TeamFlowLogo() {
 const NAV_LINKS = [
   { label: 'Features', href: '#features' },
   { label: 'Solutions', href: '#solutions' },
-  { label: 'Pricing', href: '#pricing' },
 ];
 
 export function LandingNavbar() {

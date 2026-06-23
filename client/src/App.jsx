@@ -13,6 +13,7 @@ import ProjectDetailPage   from './pages/ProjectDetailPage';
 import ProfilePage         from './pages/ProfilePage';
 import TeamPage            from './pages/TeamPage';
 import SettingsPage        from './pages/SettingsPage';
+import ReportsPage         from './pages/ReportsPage';
 import { ROUTES }          from './utils/constants';
 
 /* ─── Route guards ─────────────────────────────────────────────────────── */
@@ -35,7 +36,7 @@ function ProtectedLayout() {
 
 function PublicRoute({ children }) {
   const { user } = useAuth();
-  if (user) return <Navigate to={ROUTES.DASHBOARD} replace />;
+  if (user) return <Navigate to={ROUTES.BOARD} replace />;
   return children;
 }
 
@@ -80,12 +81,12 @@ export default function App() {
 
               {/* Protected — all share the sidebar layout */}
               <Route element={<ProtectedLayout />}>
-                <Route path={ROUTES.DASHBOARD} element={<DashboardPage />} />
-                <Route path={ROUTES.PROJECTS}  element={<ProjectsPage />} />
+                <Route path={ROUTES.DASHBOARD} element={<Navigate to={ROUTES.BOARD} replace />} />
+                <Route path={ROUTES.BOARD}     element={<ProjectsPage />} />
+                <Route path={ROUTES.PROJECTS}  element={<Navigate to={ROUTES.BOARD} replace />} />
                 <Route path="/projects/:id"    element={<ProjectDetailPage />} />
-                <Route path={ROUTES.BOARD}     element={<ComingSoon title="Workspace Board" />} />
                 <Route path={ROUTES.TEAM}      element={<TeamPage />} />
-                <Route path={ROUTES.REPORTS}   element={<ComingSoon title="Reports & Analytics" />} />
+                <Route path={ROUTES.REPORTS}   element={<ReportsPage />} />
                 <Route path={ROUTES.SETTINGS}  element={<SettingsPage />} />
                 <Route path={ROUTES.PROFILE}   element={<ProfilePage />} />
                 <Route path="/tasks/:id"       element={<ComingSoon title="Task Detail" />} />

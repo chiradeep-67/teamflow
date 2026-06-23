@@ -184,7 +184,7 @@ export default function ChangePasswordPage() {
               placeholder="Repeat new password"
               value={form.confirm}
               onChange={e => setForm(f => ({ ...f, confirm: e.target.value }))}
-              error={errors.confirm}
+              error={errors.confirm} 
               leftIcon={<Lock size={14} />}
               rightIcon={
                 <button type="button" onClick={() => toggle('confirm')} tabIndex={-1} className="hover:text-gray-700 dark:hover:text-gray-300">

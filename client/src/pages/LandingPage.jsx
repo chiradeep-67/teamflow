@@ -441,126 +441,6 @@ function UseCasesSection() {
 
 /* ──────────────────────── PRICING ─────────────────────────── */
 
-const PLANS = [
-  {
-    name: 'Starter',
-    price: 0,
-    period: 'forever free',
-    description: 'Perfect for small teams just getting started.',
-    features: ['Up to 5 members', '3 active projects', 'Basic Kanban boards', 'Task assignment', '1 GB storage'],
-    cta: 'Start for free',
-    highlighted: false,
-  },
-  {
-    name: 'Pro',
-    price: 12,
-    period: 'per user / month',
-    description: 'For growing teams that need more power.',
-    features: ['Unlimited members', 'Unlimited projects', 'Sprint planning & burndown', 'Role-based access', 'Advanced analytics', 'Priority support', '50 GB storage'],
-    cta: 'Start 14-day trial',
-    highlighted: true,
-  },
-  {
-    name: 'Enterprise',
-    price: null,
-    period: 'custom pricing',
-    description: 'For organisations that need security & scale.',
-    features: ['Everything in Pro', 'SSO & SAML', 'Audit logs', 'Dedicated account manager', 'Custom integrations', 'SLA guarantee', 'Unlimited storage'],
-    cta: 'Contact sales',
-    highlighted: false,
-  },
-];
-
-function PricingSection() {
-  return (
-    <section id="pricing" className="py-24 px-5 sm:px-8 bg-white dark:bg-gray-950">
-      <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-14">
-          <span className="inline-block text-xs font-semibold uppercase tracking-widest text-indigo-600 dark:text-indigo-400 mb-4">Pricing</span>
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white tracking-tight mb-4">
-            Simple, transparent pricing
-          </h2>
-          <p className="text-gray-500 dark:text-gray-400 text-lg max-w-md mx-auto">
-            No hidden fees. No surprise bills. Cancel anytime.
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-5">
-          {PLANS.map(plan => (
-            <div
-              key={plan.name}
-              className={cn(
-                'relative rounded-2xl p-7 flex flex-col',
-                plan.highlighted
-                  ? 'bg-indigo-600 text-white border border-indigo-500'
-                  : 'bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800'
-              )}
-            >
-              {plan.highlighted && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white text-indigo-600 text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full border border-indigo-200">
-                  Most Popular
-                </div>
-              )}
-
-              <div className="mb-6">
-                <p className={cn('text-sm font-semibold mb-1', plan.highlighted ? 'text-indigo-200' : 'text-gray-500 dark:text-gray-400')}>
-                  {plan.name}
-                </p>
-                <div className="flex items-end gap-1 mb-1">
-                  {plan.price !== null ? (
-                    <>
-                      <span className={cn('text-4xl font-bold tracking-tight', plan.highlighted ? 'text-white' : 'text-gray-900 dark:text-white')}>
-                        ${plan.price}
-                      </span>
-                      <span className={cn('text-sm mb-1.5', plan.highlighted ? 'text-indigo-200' : 'text-gray-400')}>
-                        /mo
-                      </span>
-                    </>
-                  ) : (
-                    <span className={cn('text-3xl font-bold', plan.highlighted ? 'text-white' : 'text-gray-900 dark:text-white')}>
-                      Custom
-                    </span>
-                  )}
-                </div>
-                <p className={cn('text-xs', plan.highlighted ? 'text-indigo-200' : 'text-gray-400 dark:text-gray-600')}>
-                  {plan.period}
-                </p>
-                <p className={cn('text-sm mt-3', plan.highlighted ? 'text-indigo-100' : 'text-gray-500 dark:text-gray-400')}>
-                  {plan.description}
-                </p>
-              </div>
-
-              <ul className="space-y-2.5 mb-8 flex-1">
-                {plan.features.map(f => (
-                  <li key={f} className={cn('flex items-start gap-2.5 text-sm', plan.highlighted ? 'text-indigo-100' : 'text-gray-600 dark:text-gray-400')}>
-                    <CheckCircle size={14} className={cn('mt-0.5 shrink-0', plan.highlighted ? 'text-indigo-300' : 'text-indigo-500')} />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-
-              <Link
-                to={ROUTES.REGISTER}
-                className={cn(
-                  'w-full text-center py-2.5 rounded-xl text-sm font-semibold transition-colors',
-                  plan.highlighted
-                    ? 'bg-white text-indigo-600 hover:bg-indigo-50'
-                    : 'bg-indigo-600 hover:bg-indigo-500 text-white'
-                )}
-              >
-                {plan.cta}
-              </Link>
-            </div>
-          ))}
-        </div>
-
-        <p className="text-center text-sm text-gray-400 dark:text-gray-600 mt-8">
-          All plans include a 14-day free trial. No credit card required.
-        </p>
-      </div>
-    </section>
-  );
-}
 
 /* ─────────────────────────── CTA ──────────────────────────── */
 
@@ -613,7 +493,7 @@ export default function LandingPage() {
       <TrustedBySection />
       <FeaturesSection />
       <UseCasesSection />
-      <PricingSection />
+
       <CTASection />
       <Footer />
     </div>

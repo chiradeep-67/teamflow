@@ -114,7 +114,7 @@ export default function DashboardPage() {
           </div>
         </div>
         {canCreateProject && (
-          <Link to={ROUTES.PROJECTS}>
+          <Link to={ROUTES.BOARD}>
             <Button size="sm" leftIcon={<Plus size={13} />}>New Project</Button>
           </Link>
         )}
@@ -144,7 +144,7 @@ export default function DashboardPage() {
             <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
               {user?.systemRole === 'member' || user?.systemRole === 'client' ? 'My Tasks' : 'Recent Tasks'}
             </h2>
-            <Link to={ROUTES.PROJECTS} className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline flex items-center gap-1">
+            <Link to={ROUTES.BOARD} className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline flex items-center gap-1">
               View projects <ArrowRight size={11} />
             </Link>
           </div>
@@ -191,7 +191,7 @@ export default function DashboardPage() {
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/70 dark:border-gray-800 overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
               <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Projects</h2>
-              <Link to={ROUTES.PROJECTS} className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline flex items-center gap-1">
+              <Link to={ROUTES.BOARD} className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline flex items-center gap-1">
                 All <ArrowRight size={11} />
               </Link>
             </div>
@@ -259,7 +259,7 @@ export default function DashboardPage() {
               </div>
               <div className="p-3 grid grid-cols-2 gap-2">
                 {[
-                  { label: 'New Project', icon: FolderKanban, to: ROUTES.PROJECTS },
+                  { label: 'New Project', icon: FolderKanban, to: ROUTES.BOARD },
                   { label: 'View Team',   icon: CheckSquare,   to: ROUTES.TEAM },
                 ].map(q => (
                   <Link key={q.label} to={q.to}

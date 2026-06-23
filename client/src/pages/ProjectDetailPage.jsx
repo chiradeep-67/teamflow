@@ -34,9 +34,10 @@ const COLS_CONFIG = [
   { id: 'in_progress', label: 'In Progress', color: '#6366f1' },
   { id: 'in_review',   label: 'In Review',   color: '#8b5cf6' },
   { id: 'done',        label: 'Done',        color: '#22c55e' },
+  { id: 'cancelled',   label: 'Cancelled',   color: '#ef4444' },
 ];
 
-const STATUS_LABEL = { todo: 'To Do', in_progress: 'In Progress', in_review: 'In Review', done: 'Done' };
+const STATUS_LABEL = { todo: 'To Do', in_progress: 'In Progress', in_review: 'In Review', done: 'Done', cancelled: 'Cancelled' };
 
 /* ─── Avatar ─── */
 function UserAvatar({ user, size = 'sm' }) {
@@ -90,7 +91,7 @@ function ManageTeamModal({ project, onClose, onProjectUpdate }) {
       setSelectedUser('');
       setSelectedRole('member');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to add member');
+      setError(err.response?.data?.message || 'Failed to assign member');
     } finally {
       setAdding(false);
     }
@@ -133,45 +134,9 @@ function ManageTeamModal({ project, onClose, onProjectUpdate }) {
             </div>
           )}
 
-          {/* Current members */}
+          {/* Assign member */}
           <div>
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Current Members</p>
-            <div className="space-y-2">
-              {project.members.map(m => {
-                const u = m.user;
-                if (!u) return null;
-                const uid = u._id || u;
-                const roleLabel = PROJECT_ROLES.find(r => r.value === m.projectRole)?.label ?? m.projectRole;
-                return (
-                  <div key={uid} className="flex items-center justify-between py-2 px-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-7 h-7 rounded-full bg-indigo-500 flex items-center justify-center text-white text-[10px] font-bold shrink-0">
-                        {u.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium text-gray-900 dark:text-white truncate">{u.name}</p>
-                        <p className="text-[10px] text-gray-400 dark:text-gray-600 truncate">{roleLabel}</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleRemove(uid)}
-                      disabled={removing === uid}
-                      className="ml-2 w-6 h-6 rounded-md flex items-center justify-center text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors shrink-0 disabled:opacity-40"
-                      title="Remove from project"
-                    >
-                      {removing === uid
-                        ? <Loader2 size={12} className="animate-spin" />
-                        : <Trash2 size={12} />}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Add new member */}
-          <div>
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Add Member</p>
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Assign Member</p>
             {loadingUsers ? (
               <div className="flex items-center gap-2 text-xs text-gray-400 py-2">
                 <Loader2 size={13} className="animate-spin" /> Loading workspace members…
@@ -209,7 +174,7 @@ function ManageTeamModal({ project, onClose, onProjectUpdate }) {
                   disabled={!selectedUser || adding}
                   leftIcon={<Plus size={13} />}
                 >
-                  Add to project
+                  Assign to project
                 </Button>
               </div>
             )}
@@ -221,17 +186,18 @@ function ManageTeamModal({ project, onClose, onProjectUpdate }) {
 }
 
 /* ─── Task Create / Edit Modal ─── */
-function TaskModal({ project, task, onClose, onSave, saving }) {
+function TaskModal({ project, task, onClose, onSave, saving, canAssign }) {
   const members = project?.members ?? [];
 
   const [form, setForm] = useState({
-    title:       task?.title       ?? '',
-    description: task?.description ?? '',
-    priority:    task?.priority    ?? 'medium',
-    status:      task?.status      ?? 'todo',
-    assignedTo:  task?.assignedTo?._id ?? task?.assignedTo ?? '',
-    dueDate:     task?.dueDate ? task.dueDate.slice(0, 10) : '',
-    tags:        task?.tags ?? [],
+    title:         task?.title         ?? '',
+    description:   task?.description   ?? '',
+    priority:      task?.priority      ?? 'medium',
+    status:        task?.status        ?? 'todo',
+    assignedTo:    task?.assignedTo?._id ?? task?.assignedTo ?? '',
+    dueDate:       task?.dueDate ? task.dueDate.slice(0, 10) : '',
+    estimatedTime: task?.estimatedTime ?? '',
+    tags:          task?.tags ?? [],
   });
   const [error, setError] = useState('');
 
@@ -280,23 +246,36 @@ function TaskModal({ project, task, onClose, onSave, saving }) {
                 {COLS_CONFIG.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
               </select>
             </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Assign To</label>
-              <select value={form.assignedTo} onChange={e => setForm(f => ({ ...f, assignedTo: e.target.value }))}
-                className="h-10 rounded-lg text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all">
-                <option value="">Unassigned</option>
-                {members.map(m => {
-                  const u = m.user;
-                  return u ? <option key={u._id} value={u._id}>{u.name}</option> : null;
-                })}
-              </select>
-            </div>
+            {canAssign && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Assign To</label>
+                <select value={form.assignedTo} onChange={e => setForm(f => ({ ...f, assignedTo: e.target.value }))}
+                  className="h-10 rounded-lg text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all">
+                  <option value="">Unassigned</option>
+                  {members.map(m => {
+                    const u = m.user;
+                    return u ? <option key={u._id} value={u._id}>{u.name}</option> : null;
+                  })}
+                </select>
+              </div>
+            )}
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Due Date</label>
               <Input type="date" value={form.dueDate}
                 onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))}
                 leftIcon={<Calendar size={13} />} />
             </div>
+            {canAssign && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Estimated Time</label>
+                <Input
+                  placeholder="e.g. 2h 30m"
+                  value={form.estimatedTime}
+                  onChange={e => setForm(f => ({ ...f, estimatedTime: e.target.value }))}
+                  leftIcon={<Clock size={13} />}
+                />
+              </div>
+            )}
           </div>
 
           <div className="flex gap-2 pt-2">
@@ -342,6 +321,12 @@ function TaskCard({ task, onDragStart, onOpenTask, canEdit }) {
         </div>
         {task.assignedTo && <UserAvatar user={task.assignedTo} size="sm" />}
       </div>
+      {task.estimatedTime && (
+        <div className="flex items-center gap-1 text-[10px] text-indigo-500 dark:text-indigo-400 mt-1.5">
+          <Clock size={10} />
+          <span>{task.estimatedTime}</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -474,6 +459,13 @@ function TaskPanel({ task, projectId, onClose, onEdit, onUpdate, canEdit, curren
                 <p className="text-xs font-medium text-gray-800 dark:text-gray-200">{STATUS_LABEL[task.status]}</p>
               )}
             </div>
+            <div className="col-span-2">
+              <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-1">Estimated Time</p>
+              <p className="text-xs font-medium text-gray-800 dark:text-gray-200 flex items-center gap-1">
+                <Clock size={11} className="text-gray-400" />
+                {task.estimatedTime || '—'}
+              </p>
+            </div>
           </div>
 
           {/* Comments */}
@@ -569,7 +561,7 @@ export default function ProjectDetailPage() {
     return (
       <div className="p-6 text-center">
         <p className="text-gray-500">Project not found or you don&apos;t have access.</p>
-        <Link to="/projects" className="text-indigo-600 text-sm hover:underline mt-2 inline-block">← Back to projects</Link>
+        <Link to="/board" className="text-indigo-600 text-sm hover:underline mt-2 inline-block">← Back to board</Link>
       </div>
     );
   }
@@ -580,13 +572,14 @@ export default function ProjectDetailPage() {
     return (
       <div className="p-6 text-center">
         <p className="text-gray-500">You don&apos;t have access to this project.</p>
-        <Link to="/projects" className="text-indigo-600 text-sm hover:underline mt-2 inline-block">← Back to projects</Link>
+        <Link to="/board" className="text-indigo-600 text-sm hover:underline mt-2 inline-block">← Back to board</Link>
       </div>
     );
   }
 
   const canCreate    = ['admin', 'project_manager', 'team_lead'].includes(projectRole);
   const canEdit      = canCreate;
+  const canAssign    = ['project_manager', 'team_lead'].includes(projectRole);
   const canManageTeam = ['admin', 'project_manager'].includes(projectRole);
 
   const doneTasks = tasks.filter(t => t.status === 'done').length;
@@ -656,7 +649,7 @@ export default function ProjectDetailPage() {
       <div className="shrink-0 px-6 py-4 bg-white dark:bg-gray-900 border-b border-gray-200/70 dark:border-gray-800">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <Link to="/projects" className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors shrink-0">
+            <Link to="/board" className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors shrink-0">
               <ArrowLeft size={16} />
             </Link>
             <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${project.color || '#6366f1'}20` }}>
@@ -745,6 +738,7 @@ export default function ProjectDetailPage() {
           onClose={() => { setNewTaskCol(null); setEditingTask(null); }}
           onSave={handleSaveTask}
           saving={saving}
+          canAssign={canAssign}
         />
       )}
 
