@@ -10,10 +10,10 @@ const { sendCredentialsEmail, sendPasswordResetEmail } = require('../utils/email
 router.use(protect);
 
 /* ── GET /api/users ──────────────────────────────────────────────────────────
- * Admin sees everyone in the org; PM sees everyone; TL/Member see only themselves. */
+ * Admin, PM, and TL see everyone in the org; members see only themselves. */
 router.get('/', async (req, res) => {
   try {
-    const canSeeAll = ['admin', 'project_manager'].includes(req.user.systemRole);
+    const canSeeAll = ['admin', 'project_manager', 'team_lead'].includes(req.user.systemRole);
     const users = canSeeAll
       ? await User.find({ organizationId: req.user.organizationId, isActive: true }).select('-password')
       : [req.user];

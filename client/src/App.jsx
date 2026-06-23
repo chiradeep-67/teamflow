@@ -7,7 +7,6 @@ import LoginPage           from './pages/LoginPage';
 import RegisterPage        from './pages/RegisterPage';
 import ChangePasswordPage  from './pages/ChangePasswordPage';
 import CreateOrgPage       from './pages/CreateOrgPage';
-import DashboardPage       from './pages/DashboardPage';
 import ProjectsPage        from './pages/ProjectsPage';
 import ProjectDetailPage   from './pages/ProjectDetailPage';
 import ProfilePage         from './pages/ProfilePage';
@@ -43,6 +42,13 @@ function PublicRoute({ children }) {
 function RequireAuth({ children }) {
   const { user } = useAuth();
   if (!user) return <Navigate to={ROUTES.LOGIN} replace />;
+  return children;
+}
+
+function RequireRole({ roles, children }) {
+  const { user } = useAuth();
+  if (!user) return <Navigate to={ROUTES.LOGIN} replace />;
+  if (!roles.includes(user.systemRole)) return <Navigate to={ROUTES.BOARD} replace />;
   return children;
 }
 
@@ -85,9 +91,9 @@ export default function App() {
                 <Route path={ROUTES.BOARD}     element={<ProjectsPage />} />
                 <Route path={ROUTES.PROJECTS}  element={<Navigate to={ROUTES.BOARD} replace />} />
                 <Route path="/projects/:id"    element={<ProjectDetailPage />} />
-                <Route path={ROUTES.TEAM}      element={<TeamPage />} />
-                <Route path={ROUTES.REPORTS}   element={<ReportsPage />} />
-                <Route path={ROUTES.SETTINGS}  element={<SettingsPage />} />
+                <Route path={ROUTES.TEAM}      element={<RequireRole roles={['admin', 'project_manager', 'team_lead']}><TeamPage /></RequireRole>} />
+                <Route path={ROUTES.REPORTS}   element={<RequireRole roles={['admin', 'project_manager', 'team_lead']}><ReportsPage /></RequireRole>} />
+                <Route path={ROUTES.SETTINGS}  element={<RequireRole roles={['admin']}><SettingsPage /></RequireRole>} />
                 <Route path={ROUTES.PROFILE}   element={<ProfilePage />} />
                 <Route path="/tasks/:id"       element={<ComingSoon title="Task Detail" />} />
               </Route>

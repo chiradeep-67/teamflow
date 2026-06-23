@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Plus, Search, FolderKanban, Clock, Users, X, Loader2, Calendar,
-  CheckSquare, AlertCircle, TrendingUp, ArrowRight, Activity, BarChart2,
+  CheckSquare, AlertCircle, TrendingUp, Activity, BarChart2, Settings,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { RoleBadge } from '../components/common/RoleBadge';
@@ -31,6 +31,39 @@ const TASK_STATUS_LABEL = { todo: 'To Do', in_progress: 'In Progress', in_review
 const PRIORITY_DOT = { urgent: 'bg-red-500', high: 'bg-orange-400', medium: 'bg-yellow-400', low: 'bg-gray-300 dark:bg-gray-600' };
 
 const COLORS = ['#6366f1','#8b5cf6','#14b8a6','#f59e0b','#ef4444','#22c55e','#ec4899','#3b82f6'];
+
+const ROLE_COPY = {
+  admin: {
+    title: 'Workspace Admin',
+    scope: 'You can see the whole workspace, manage people, review reports, and control settings.',
+    projectLabel: 'Workspace Projects',
+    taskLabel: 'Workspace Tasks',
+  },
+  project_manager: {
+    title: 'Project Manager',
+    scope: 'You can create projects, assign members, track delivery, and review reports.',
+    projectLabel: 'Managed Projects',
+    taskLabel: 'Managed Tasks',
+  },
+  team_lead: {
+    title: 'Team Lead',
+    scope: 'You can track assigned projects, manage task progress, and review delivery reports.',
+    projectLabel: 'Team Projects',
+    taskLabel: 'Team Tasks',
+  },
+  member: {
+    title: 'My Workspace',
+    scope: 'You can focus on your assigned projects, tasks, due dates, and updates.',
+    projectLabel: 'Assigned Projects',
+    taskLabel: 'My Tasks',
+  },
+  client: {
+    title: 'My Workspace',
+    scope: 'You can follow assigned work, project progress, and task updates.',
+    projectLabel: 'Assigned Projects',
+    taskLabel: 'My Tasks',
+  },
+};
 
 /* ─── Small helpers ─── */
 function Avatar({ name = '', size = 'sm' }) {
@@ -191,7 +224,12 @@ function ProjectCard({ project, taskCount, doneCount, userRole }) {
 /* ─── Page ─── */
 export default function ProjectsPage() {
   const { user, getProjectRole } = useAuth();
-  const canCreateProject = user?.systemRole === 'project_manager';
+  const role = user?.systemRole;
+  const roleCopy = ROLE_COPY[role] ?? ROLE_COPY.member;
+  const canCreateProject = role === 'project_manager';
+  const canManageTeam = ['admin', 'project_manager'].includes(role);
+  const canViewTeam = ['admin', 'project_manager', 'team_lead'].includes(role);
+  const canViewReports = ['admin', 'project_manager', 'team_lead'].includes(role);
 
   const [projects, setProjects]       = useState([]);
   const [allTasks, setAllTasks]       = useState([]);
@@ -253,7 +291,7 @@ export default function ProjectsPage() {
   };
 
   /* ─── Derived stats ─── */
-  const myTasks = ['member', 'client'].includes(user?.systemRole)
+  const myTasks = ['member', 'client'].includes(role)
     ? allTasks.filter(t => (t.assignedTo?._id || t.assignedTo) === user.id)
     : allTasks;
 
@@ -266,10 +304,17 @@ export default function ProjectsPage() {
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
 
   const STATS = [
-    { label: 'Active Projects', value: projects.filter(p => p.status === 'active').length, sub: `${projects.length} total`, icon: FolderKanban, color: 'text-indigo-500', bg: 'bg-indigo-50 dark:bg-indigo-500/10' },
+    { label: 'Active Projects', value: projects.filter(p => p.status === 'active').length, sub: `${projects.length} visible`, icon: FolderKanban, color: 'text-indigo-500', bg: 'bg-indigo-50 dark:bg-indigo-500/10' },
     { label: 'Pending Tasks',   value: pending.length, sub: 'not yet done',                icon: CheckSquare,  color: 'text-violet-500', bg: 'bg-violet-50 dark:bg-violet-500/10' },
     { label: 'Overdue',         value: overdue.length, sub: overdue.length > 0 ? 'needs attention' : 'all on track', icon: AlertCircle, color: overdue.length > 0 ? 'text-red-500' : 'text-green-500', bg: overdue.length > 0 ? 'bg-red-50 dark:bg-red-500/10' : 'bg-green-50 dark:bg-green-500/10' },
     { label: 'Completion Rate', value: `${pct}%`,      sub: `${done.length} of ${myTasks.length} tasks`, icon: TrendingUp, color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-500/10' },
+  ];
+
+  const quickActions = [
+    ...(canCreateProject ? [{ label: 'New Project', icon: FolderKanban, action: () => setShowModal(true) }] : []),
+    ...(canViewTeam ? [{ label: role === 'admin' ? 'Manage Team' : role === 'project_manager' ? 'Assign Team' : 'Team Members', icon: Users, to: ROUTES.TEAM }] : []),
+    ...(canViewReports ? [{ label: 'Reports', icon: BarChart2, to: ROUTES.REPORTS }] : []),
+    ...(role === 'admin' ? [{ label: 'Settings', icon: Settings, to: ROUTES.SETTINGS }] : []),
   ];
 
   const FILTERS = [
@@ -297,19 +342,35 @@ export default function ProjectsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
-            {greeting}, {user?.name?.split(' ')[0]} 👋
-          </h1>
+          <p className="text-xs font-medium text-indigo-600 dark:text-indigo-400 mb-1">{roleCopy.title}</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">{greeting}, {user?.name?.split(' ')[0]}</h1>
           <div className="flex items-center gap-2 mt-1">
             {user?.title && <p className="text-sm text-gray-500 dark:text-gray-400">{user.title}</p>}
             <RoleBadge role={user?.systemRole} size="xs" />
           </div>
         </div>
-        {canCreateProject && (
+        {canCreateProject ? (
           <Button size="sm" leftIcon={<Plus size={13} />} onClick={() => setShowModal(true)}>
             New Project
           </Button>
-        )}
+        ) : canManageTeam ? (
+          <Link to={ROUTES.TEAM}>
+            <Button size="sm" variant="secondary" leftIcon={<Users size={13} />}>
+              {role === 'admin' ? 'Manage Team' : 'View Team'}
+            </Button>
+          </Link>
+        ) : canViewReports ? (
+          <Link to={ROUTES.REPORTS}>
+            <Button size="sm" variant="secondary" leftIcon={<BarChart2 size={13} />}>
+              View Reports
+            </Button>
+          </Link>
+        ) : null}
+      </div>
+
+      <div className="rounded-xl border border-indigo-100 dark:border-indigo-500/20 bg-indigo-50/70 dark:bg-indigo-500/10 p-4">
+        <p className="text-sm font-medium text-gray-900 dark:text-white">One TeamFlow workspace</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{roleCopy.scope}</p>
       </div>
 
       {/* Stats */}
@@ -335,7 +396,7 @@ export default function ProjectsPage() {
         <div className="lg:col-span-2 bg-white dark:bg-gray-900 rounded-xl border border-gray-200/70 dark:border-gray-800 overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
             <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
-              {['member', 'client'].includes(user?.systemRole) ? 'My Tasks' : 'Recent Tasks'}
+              {roleCopy.taskLabel}
             </h2>
           </div>
           {myTasks.length === 0 ? (
@@ -396,18 +457,14 @@ export default function ProjectsPage() {
             </div>
           </div>
 
-          {/* Quick Actions — PM only */}
-          {canCreateProject && (
+          {quickActions.length > 0 && (
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/70 dark:border-gray-800 overflow-hidden">
               <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100 dark:border-gray-800">
                 <BarChart2 size={13} className="text-gray-400" />
                 <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Quick Actions</h2>
               </div>
               <div className="p-3 grid grid-cols-2 gap-2">
-                {[
-                  { label: 'New Project', icon: FolderKanban, action: () => setShowModal(true) },
-                  { label: 'View Team',   icon: CheckSquare,  to: ROUTES.TEAM },
-                ].map(q => (
+                {quickActions.map(q => (
                   q.to ? (
                     <Link key={q.label} to={q.to}
                       className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50 hover:border-indigo-200 dark:hover:border-indigo-500/30 hover:bg-indigo-50/50 dark:hover:bg-indigo-500/5 transition-all group">
@@ -431,7 +488,7 @@ export default function ProjectsPage() {
       {/* Projects section */}
       <div>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-white">Projects</h2>
+          <h2 className="text-base font-semibold text-gray-900 dark:text-white">{roleCopy.projectLabel}</h2>
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="w-full sm:w-52">
               <Input placeholder="Search projects…" value={search} onChange={e => setSearch(e.target.value)} leftIcon={<Search size={14} />} />

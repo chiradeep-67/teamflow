@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ArrowRight, Play, LayoutGrid, UserCheck, ShieldCheck,
+  ArrowRight, LayoutGrid, UserCheck, ShieldCheck,
   BarChart3, CheckCircle, ChevronRight, Zap, Globe2,
   Clock, Users, TrendingUp, Star,
 } from 'lucide-react';
@@ -136,14 +136,6 @@ function HeroSection() {
             Get Started for Free
             <ArrowRight size={15} />
           </Link>
-          <button
-            className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-semibold rounded-xl border border-gray-200 dark:border-gray-700 transition-all duration-150"
-          >
-            <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center">
-              <Play size={9} className="text-indigo-600 dark:text-indigo-400 translate-x-[1px]" fill="currentColor" />
-            </span>
-            Watch Demo
-          </button>
         </div>
 
         {/* Social proof numbers */}
