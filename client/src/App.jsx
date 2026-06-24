@@ -11,6 +11,7 @@ import ProjectsPage        from './pages/ProjectsPage';
 import ProjectDetailPage   from './pages/ProjectDetailPage';
 import ProfilePage         from './pages/ProfilePage';
 import TeamPage            from './pages/TeamPage';
+import EmployeesPage       from './pages/EmployeesPage';
 import SettingsPage        from './pages/SettingsPage';
 import ReportsPage         from './pages/ReportsPage';
 import { ROUTES }          from './utils/constants';
@@ -92,6 +93,7 @@ export default function App() {
                 <Route path={ROUTES.PROJECTS}  element={<Navigate to={ROUTES.BOARD} replace />} />
                 <Route path="/projects/:id"    element={<ProjectDetailPage />} />
                 <Route path={ROUTES.TEAM}      element={<RequireRole roles={['admin', 'project_manager', 'team_lead']}><TeamPage /></RequireRole>} />
+                <Route path={ROUTES.EMPLOYEES} element={<RequireRole roles={['admin']}><EmployeesPage /></RequireRole>} />
                 <Route path={ROUTES.REPORTS}   element={<RequireRole roles={['admin', 'project_manager', 'team_lead']}><ReportsPage /></RequireRole>} />
                 <Route path={ROUTES.SETTINGS}  element={<RequireRole roles={['admin']}><SettingsPage /></RequireRole>} />
                 <Route path={ROUTES.PROFILE}   element={<ProfilePage />} />

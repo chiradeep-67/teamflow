@@ -14,6 +14,7 @@ export const ROUTES = {
   TASKS:           '/tasks',
   TASK:            '/tasks/:id',
   TEAM:            '/team',
+  EMPLOYEES:       '/employees',
   REPORTS:         '/reports',
   SETTINGS:        '/settings',
   PROFILE:         '/profile',

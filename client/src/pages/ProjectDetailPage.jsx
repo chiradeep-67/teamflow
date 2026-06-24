@@ -58,7 +58,7 @@ const PROJECT_ROLES = [
 ];
 
 /* ─── Manage Team Modal ─── */
-function ManageTeamModal({ project, onClose, onProjectUpdate }) {
+function ManageTeamModal({ project, onClose, onProjectUpdate, isAdminView }) {
   const [allUsers,    setAllUsers]    = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [selectedUser, setSelectedUser] = useState('');
@@ -131,6 +131,44 @@ function ManageTeamModal({ project, onClose, onProjectUpdate }) {
           {error && (
             <div className="p-3 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200/70 dark:border-red-500/20 text-red-600 dark:text-red-400 text-xs">
               {error}
+            </div>
+          )}
+
+          {/* Current members — admin view only */}
+          {isAdminView && (
+            <div>
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Current Members</p>
+              <div className="space-y-2">
+                {project.members.map(m => {
+                  const u = m.user;
+                  if (!u) return null;
+                  const uid = u._id || u;
+                  const roleLabel = PROJECT_ROLES.find(r => r.value === m.projectRole)?.label ?? m.projectRole;
+                  return (
+                    <div key={uid} className="flex items-center justify-between py-2 px-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-7 h-7 rounded-full bg-indigo-500 flex items-center justify-center text-white text-[10px] font-bold shrink-0">
+                          {u.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-gray-900 dark:text-white truncate">{u.name}</p>
+                          <p className="text-[10px] text-gray-400 dark:text-gray-600 truncate">{roleLabel}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleRemove(uid)}
+                        disabled={removing === uid}
+                        className="ml-2 w-6 h-6 rounded-md flex items-center justify-center text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors shrink-0 disabled:opacity-40"
+                        title="Remove from project"
+                      >
+                        {removing === uid
+                          ? <Loader2 size={12} className="animate-spin" />
+                          : <Trash2 size={12} />}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 
@@ -747,6 +785,7 @@ export default function ProjectDetailPage() {
           project={project}
           onClose={() => setManageTeam(false)}
           onProjectUpdate={(updated) => setProject(updated)}
+          isAdminView={projectRole === 'admin'}
         />
       )}
     </div>
