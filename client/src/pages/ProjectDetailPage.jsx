@@ -329,19 +329,19 @@ function TaskModal({ project, task, onClose, onSave, saving, canAssign }) {
 }
 
 /* ─── Task Card ─── */
-function TaskCard({ task, onDragStart, onOpenTask, canEdit }) {
+function TaskCard({ task, onDragStart, onOpenTask, canEdit, canDrag }) {
   const P = PRIORITY_MAP[task.priority] ?? PRIORITY_MAP.medium;
   const tagCls = task.tags?.[0] ? (TAG_COLORS[task.tags[0]] ?? 'bg-gray-100 dark:bg-gray-700 text-gray-500') : null;
 
   return (
     <div
-      draggable={canEdit}
-      onDragStart={canEdit ? (e) => onDragStart(e, task._id, task.status) : undefined}
+      draggable={canDrag}
+      onDragStart={canDrag ? (e) => onDragStart(e, task._id, task.status) : undefined}
       onClick={() => onOpenTask(task)}
       className={cn(
         'group bg-white dark:bg-gray-800 rounded-xl border border-gray-200/70 dark:border-gray-700/50',
         'p-3.5 select-none transition-all duration-150',
-        canEdit ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer',
+        canDrag ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer',
         'hover:border-indigo-200 dark:hover:border-indigo-500/40 hover:shadow-sm animate-fade-in',
       )}
     >
@@ -372,7 +372,7 @@ function TaskCard({ task, onDragStart, onOpenTask, canEdit }) {
 }
 
 /* ─── Kanban Column ─── */
-function KanbanCol({ col, tasks, onDragStart, onDrop, onOpenTask, onAddTask, canCreate }) {
+function KanbanCol({ col, tasks, onDragStart, onDrop, onOpenTask, onAddTask, canCreate, canDrag }) {
   const [isDragOver, setIsDragOver] = useState(false);
 
   return (
@@ -400,7 +400,7 @@ function KanbanCol({ col, tasks, onDragStart, onDrop, onOpenTask, onAddTask, can
         )}
       >
         {tasks.map(task => (
-          <TaskCard key={task._id} task={task} onDragStart={onDragStart} onOpenTask={onOpenTask} canEdit={canCreate} />
+          <TaskCard key={task._id} task={task} onDragStart={onDragStart} onOpenTask={onOpenTask} canEdit={canCreate} canDrag={canDrag} />
         ))}
         {tasks.length === 0 && !isDragOver && (
           <div className="flex items-center justify-center flex-1 text-xs text-gray-300 dark:text-gray-700">
@@ -617,11 +617,18 @@ export default function ProjectDetailPage() {
     );
   }
 
-  const canCreate    = ['admin', 'project_manager', 'team_lead'].includes(projectRole);
-  const canEdit      = canCreate;
-  const canAssign    = ['project_manager', 'team_lead'].includes(projectRole);
+  // TL creates and assigns tasks; PM manages board and edits high-priority; Member views own tasks only
+  const isProjectPM   = projectRole === 'project_manager';
+  const canCreate     = ['admin', 'team_lead'].includes(projectRole);
+  const canDrag       = ['admin', 'project_manager', 'team_lead'].includes(projectRole);
+  const canAssign     = ['admin', 'team_lead'].includes(projectRole);
   const canManageTeam = ['admin', 'project_manager'].includes(projectRole);
+  // PM can edit urgent/high priority tasks; TL/admin can edit all
+  const canEditTask   = (task) =>
+    ['admin', 'team_lead'].includes(projectRole) ||
+    (isProjectPM && ['urgent', 'high'].includes(task?.priority));
 
+  const canEdit = canCreate; // kept for backward compat — means full edit rights
   const doneTasks = tasks.filter(t => t.status === 'done').length;
   const pct       = tasks.length ? Math.round((doneTasks / tasks.length) * 100) : 0;
 
@@ -754,6 +761,7 @@ export default function ProjectDetailPage() {
               onOpenTask={setActiveTask}
               onAddTask={(colId) => setNewTaskCol(colId)}
               canCreate={canCreate}
+              canDrag={canDrag}
             />
           ))}
         </div>
@@ -766,7 +774,7 @@ export default function ProjectDetailPage() {
           onClose={() => setActiveTask(null)}
           onEdit={(t) => { setEditingTask(t); setActiveTask(null); }}
           onUpdate={handleUpdate}
-          canEdit={canEdit}
+          canEdit={canEditTask(activeTask)}
           currentUser={user}
         />
       )}

@@ -228,27 +228,29 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Quick stats / activity placeholder */}
-          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/70 dark:border-gray-800 overflow-hidden">
-            <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-              <Activity size={13} className="text-gray-400" />
-              <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Task Overview</h2>
+          {/* Task Overview — hidden for PM (they use Reports instead) */}
+          {!canCreateProject && (
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/70 dark:border-gray-800 overflow-hidden">
+              <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100 dark:border-gray-800">
+                <Activity size={13} className="text-gray-400" />
+                <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Task Overview</h2>
+              </div>
+              <div className="p-4 space-y-3">
+                {[
+                  { label: 'To Do',       count: myTasks.filter(t => t.status === 'todo').length,        color: 'bg-gray-400' },
+                  { label: 'In Progress', count: myTasks.filter(t => t.status === 'in_progress').length, color: 'bg-indigo-500' },
+                  { label: 'In Review',   count: myTasks.filter(t => t.status === 'in_review').length,   color: 'bg-violet-500' },
+                  { label: 'Done',        count: myTasks.filter(t => t.status === 'done').length,        color: 'bg-green-500' },
+                ].map(s => (
+                  <div key={s.label} className="flex items-center gap-3">
+                    <div className={cn('w-2 h-2 rounded-full shrink-0', s.color)} />
+                    <span className="text-xs text-gray-600 dark:text-gray-400 flex-1">{s.label}</span>
+                    <span className="text-xs font-semibold text-gray-900 dark:text-white">{s.count}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="p-4 space-y-3">
-              {[
-                { label: 'To Do',       count: myTasks.filter(t => t.status === 'todo').length,        color: 'bg-gray-400' },
-                { label: 'In Progress', count: myTasks.filter(t => t.status === 'in_progress').length, color: 'bg-indigo-500' },
-                { label: 'In Review',   count: myTasks.filter(t => t.status === 'in_review').length,   color: 'bg-violet-500' },
-                { label: 'Done',        count: myTasks.filter(t => t.status === 'done').length,        color: 'bg-green-500' },
-              ].map(s => (
-                <div key={s.label} className="flex items-center gap-3">
-                  <div className={cn('w-2 h-2 rounded-full shrink-0', s.color)} />
-                  <span className="text-xs text-gray-600 dark:text-gray-400 flex-1">{s.label}</span>
-                  <span className="text-xs font-semibold text-gray-900 dark:text-white">{s.count}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+          )}
 
           {/* Quick actions — Admin/PM only */}
           {canCreateProject && (

@@ -48,9 +48,14 @@ const DESIGNATION_OPTIONS = [
   { value: 'member',          label: 'Employee' },
 ];
 
-function DesignationDropdown({ userId, currentRole, onRoleChange }) {
+function DesignationDropdown({ userId, currentRole, onRoleChange, canSetPM = false }) {
   const [open,    setOpen]    = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // PM can only set TL or Member; only admin can set PM
+  const options = canSetPM
+    ? DESIGNATION_OPTIONS
+    : DESIGNATION_OPTIONS.filter(o => o.value !== 'project_manager');
 
   const handleChange = async (role) => {
     if (role === currentRole) { setOpen(false); return; }
@@ -88,7 +93,7 @@ function DesignationDropdown({ userId, currentRole, onRoleChange }) {
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div className="absolute right-0 top-7 z-20 w-44 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden">
-            {DESIGNATION_OPTIONS.map(opt => (
+            {options.map(opt => (
               <button
                 key={opt.value}
                 onClick={() => handleChange(opt.value)}
@@ -669,7 +674,7 @@ function ResetPasswordModal({ member, onClose }) {
 
 /* ─── Page ───────────────────────────────────────────────────────────────── */
 export default function TeamPage() {
-  const { user, isAdmin, isPMOrAbove } = useAuth();
+  const { user, isAdmin, isPMOrAbove, isTLOrAbove } = useAuth();
 
   const [members,  setMembers]  = useState([]);
   const [invites,  setInvites]  = useState([]);
@@ -898,7 +903,7 @@ export default function TeamPage() {
                         </div>
 
                         <div>
-                          {isAdmin && member._id !== user?.id ? (
+                          {isPMOrAbove && member._id !== user?.id ? (
                             <DesignationDropdown
                               userId={member._id}
                               currentRole={
@@ -906,6 +911,7 @@ export default function TeamPage() {
                                 (member.systemRole === 'project_manager' ? 'project_manager' : undefined)
                               }
                               onRoleChange={handleDesignationChange}
+                              canSetPM={isAdmin}
                             />
                           ) : (
                             <ProjectDesignationBadge
