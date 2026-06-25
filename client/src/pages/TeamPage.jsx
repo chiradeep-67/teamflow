@@ -41,6 +41,75 @@ function ProjectDesignationBadge({ role }) {
   );
 }
 
+/* ─── Designation Dropdown (editable) ───────────────────────────────────── */
+const DESIGNATION_OPTIONS = [
+  { value: 'project_manager', label: 'Project Manager' },
+  { value: 'team_lead',       label: 'Team Lead' },
+  { value: 'member',          label: 'Employee' },
+];
+
+function DesignationDropdown({ userId, currentRole, onRoleChange }) {
+  const [open,    setOpen]    = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = async (role) => {
+    if (role === currentRole) { setOpen(false); return; }
+    setLoading(true);
+    try {
+      await usersAPI.updateRole(userId, role);
+      onRoleChange(userId, role);
+    } catch {
+      alert('Failed to update designation');
+    } finally {
+      setLoading(false);
+      setOpen(false);
+    }
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-1 hover:opacity-80 transition-opacity"
+      >
+        {currentRole ? (
+          <span className={cn('px-2 py-0.5 rounded-md text-[11px] font-medium', DESIGNATION_STYLES[currentRole] ?? DESIGNATION_STYLES.member)}>
+            {DESIGNATION_LABELS[currentRole] ?? currentRole}
+          </span>
+        ) : (
+          <span className="text-xs text-gray-300 dark:text-gray-700">—</span>
+        )}
+        {loading
+          ? <Loader2 size={11} className="animate-spin text-gray-400" />
+          : <ChevronDown size={11} className="text-gray-400" />}
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-7 z-20 w-44 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden">
+            {DESIGNATION_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => handleChange(opt.value)}
+                className={cn(
+                  'w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors',
+                  opt.value === currentRole ? 'bg-indigo-50 dark:bg-indigo-500/10' : ''
+                )}
+              >
+                <span className={cn('px-1.5 py-0.5 rounded text-[10px] font-medium', DESIGNATION_STYLES[opt.value])}>
+                  {opt.label}
+                </span>
+                {opt.value === currentRole && <Check size={10} className="ml-auto text-indigo-600" />}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 /* ─── Assign to Project Modal ────────────────────────────────────────────── */
 function AssignToProjectModal({ onClose, onAssigned }) {
   const PROJECT_DESIGNATIONS = [
@@ -659,6 +728,11 @@ export default function TeamPage() {
   const handleRoleChange = (userId, newRole) =>
     setMembers(prev => prev.map(m => m._id === userId ? { ...m, systemRole: newRole } : m));
 
+  const handleDesignationChange = (userId, newRole) => {
+    setMembers(prev => prev.map(m => m._id === userId ? { ...m, systemRole: newRole } : m));
+    setProjectRoleMap(prev => ({ ...prev, [String(userId)]: newRole }));
+  };
+
   const handleRevokeInvite = async (id) => {
     try {
       await invitesAPI.revoke(id);
@@ -824,12 +898,23 @@ export default function TeamPage() {
                         </div>
 
                         <div>
-                          <ProjectDesignationBadge
-                            role={
-                              projectRoleMap[String(member._id)] ??
-                              (member.systemRole === 'project_manager' ? 'project_manager' : undefined)
-                            }
-                          />
+                          {isAdmin && member._id !== user?.id ? (
+                            <DesignationDropdown
+                              userId={member._id}
+                              currentRole={
+                                projectRoleMap[String(member._id)] ??
+                                (member.systemRole === 'project_manager' ? 'project_manager' : undefined)
+                              }
+                              onRoleChange={handleDesignationChange}
+                            />
+                          ) : (
+                            <ProjectDesignationBadge
+                              role={
+                                projectRoleMap[String(member._id)] ??
+                                (member.systemRole === 'project_manager' ? 'project_manager' : undefined)
+                              }
+                            />
+                          )}
                         </div>
 
                         <div>
