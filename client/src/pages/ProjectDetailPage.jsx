@@ -242,7 +242,9 @@ function TaskModal({ project, task, onClose, onSave, saving, canAssign }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.title.trim()) { setError('Title is required'); return; }
-    onSave({ ...(task?._id ? { _id: task._id } : {}), ...form });
+    const payload = { ...(task?._id ? { _id: task._id } : {}), ...form };
+    if (!payload.assignedTo) payload.assignedTo = null;
+    onSave(payload);
   };
 
   return (

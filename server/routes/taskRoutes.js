@@ -24,10 +24,11 @@ router.get('/', requireProjectMember, async (req, res) => {
 /* ── POST /api/projects/:id/tasks — PM or TL ─────────────────────────────── */
 router.post('/', requireProjectRole('project_manager', 'team_lead'), async (req, res) => {
   try {
-    // Use project's organizationId as the definitive source — always correct
     const orgId = req.project?.organizationId || req.user.organizationId;
+    const body = { ...req.body };
+    if (!body.assignedTo) delete body.assignedTo;
     const task = await Task.create({
-      ...req.body,
+      ...body,
       project:        req.params.id,
       organizationId: orgId,
       createdBy:      req.user._id,
@@ -56,7 +57,9 @@ router.put('/:taskId', requireProjectMember, async (req, res) => {
       }
     }
 
-    const updated = await Task.findByIdAndUpdate(req.params.taskId, req.body, { new: true });
+    const updateBody = { ...req.body };
+    if (!updateBody.assignedTo) delete updateBody.assignedTo;
+    const updated = await Task.findByIdAndUpdate(req.params.taskId, updateBody, { new: true });
     res.json({ success: true, task: updated });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
