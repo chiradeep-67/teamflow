@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft, Plus, Flame, AlertCircle, Circle,
-  Clock, Search, X, Calendar, Loader2, Users, Trash2,
+  Clock, Search, X, Calendar, Loader2, Users, Trash2, ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { RoleBadge } from '../components/common/RoleBadge';
@@ -54,7 +54,6 @@ const PROJECT_ROLES = [
   { value: 'project_manager', label: 'Project Manager' },
   { value: 'team_lead',       label: 'Team Lead' },
   { value: 'member',          label: 'Member' },
-  { value: 'client',          label: 'Client (read-only)' },
 ];
 
 /* ─── Manage Team Modal ─── */
@@ -452,6 +451,13 @@ function TaskPanel({ task, projectId, onClose, onEdit, onUpdate, canEdit, curren
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{P.label} priority</span>
           </div>
           <div className="flex items-center gap-1.5">
+            <Link
+              to={`/projects/${projectId}/tasks/${task._id}`}
+              title="Open full detail page"
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all"
+            >
+              <ExternalLink size={14} />
+            </Link>
             {showEdit && <Button size="sm" variant="secondary" onClick={() => onEdit(task)}>Edit</Button>}
             <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"><X size={15} /></button>
           </div>
@@ -617,16 +623,15 @@ export default function ProjectDetailPage() {
     );
   }
 
-  // TL creates and assigns tasks; PM manages board and edits high-priority; Member views own tasks only
+  // PM, TL, and admin can create and assign tasks; Member views own tasks only
   const isProjectPM   = projectRole === 'project_manager';
-  const canCreate     = ['admin', 'team_lead'].includes(projectRole);
+  const canCreate     = ['admin', 'project_manager', 'team_lead'].includes(projectRole);
   const canDrag       = ['admin', 'project_manager', 'team_lead'].includes(projectRole);
-  const canAssign     = ['admin', 'team_lead'].includes(projectRole);
+  const canAssign     = ['admin', 'project_manager', 'team_lead'].includes(projectRole);
   const canManageTeam = ['admin', 'project_manager'].includes(projectRole);
-  // PM can edit urgent/high priority tasks; TL/admin can edit all
   const canEditTask   = (task) =>
-    ['admin', 'team_lead'].includes(projectRole) ||
-    (isProjectPM && ['urgent', 'high'].includes(task?.priority));
+    ['admin', 'project_manager', 'team_lead'].includes(projectRole) ||
+    (task?.assignedTo?._id || task?.assignedTo) === user?.id;
 
   const canEdit = canCreate; // kept for backward compat — means full edit rights
   const doneTasks = tasks.filter(t => t.status === 'done').length;
@@ -686,9 +691,14 @@ export default function ProjectDetailPage() {
     }
   };
 
-  const filteredTasks = search
-    ? tasks.filter(t => t.title.toLowerCase().includes(search.toLowerCase()))
+  // Members only see tasks assigned to them
+  const visibleTasks = projectRole === 'member'
+    ? tasks.filter(t => (t.assignedTo?._id || t.assignedTo) === user.id)
     : tasks;
+
+  const filteredTasks = search
+    ? visibleTasks.filter(t => t.title.toLowerCase().includes(search.toLowerCase()))
+    : visibleTasks;
 
   return (
     <div className="flex flex-col h-[calc(100vh-0px)] lg:h-screen overflow-hidden">

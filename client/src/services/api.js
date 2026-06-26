@@ -61,11 +61,12 @@ export const projectsAPI = {
 
 /* ─── Tasks ─── */
 export const tasksAPI = {
-  getByProject:  (projectId)           => api.get(`/projects/${projectId}/tasks`),
-  create:        (projectId, data)     => api.post(`/projects/${projectId}/tasks`, data),
-  update:        (projectId, taskId, data) => api.put(`/projects/${projectId}/tasks/${taskId}`, data),
-  delete:        (projectId, taskId)   => api.delete(`/projects/${projectId}/tasks/${taskId}`),
-  addComment:    (projectId, taskId, text) => api.post(`/projects/${projectId}/tasks/${taskId}/comments`, { text }),
+  getByProject:  (projectId)                => api.get(`/projects/${projectId}/tasks`),
+  getById:       (projectId, taskId)        => api.get(`/projects/${projectId}/tasks/${taskId}`),
+  create:        (projectId, data)          => api.post(`/projects/${projectId}/tasks`, data),
+  update:        (projectId, taskId, data)  => api.put(`/projects/${projectId}/tasks/${taskId}`, data),
+  delete:        (projectId, taskId)        => api.delete(`/projects/${projectId}/tasks/${taskId}`),
+  addComment:    (projectId, taskId, text)  => api.post(`/projects/${projectId}/tasks/${taskId}/comments`, { text }),
 };
 
 /* ─── Workspace ─── */

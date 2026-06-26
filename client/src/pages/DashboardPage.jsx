@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   FolderKanban, CheckSquare, AlertCircle, TrendingUp,
-  Plus, ArrowRight, Clock, Activity, BarChart2, Loader2,
+  Plus, ArrowRight, Clock, Loader2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
@@ -228,51 +228,6 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Task Overview — hidden for PM (they use Reports instead) */}
-          {!canCreateProject && (
-            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/70 dark:border-gray-800 overflow-hidden">
-              <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-                <Activity size={13} className="text-gray-400" />
-                <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Task Overview</h2>
-              </div>
-              <div className="p-4 space-y-3">
-                {[
-                  { label: 'To Do',       count: myTasks.filter(t => t.status === 'todo').length,        color: 'bg-gray-400' },
-                  { label: 'In Progress', count: myTasks.filter(t => t.status === 'in_progress').length, color: 'bg-indigo-500' },
-                  { label: 'In Review',   count: myTasks.filter(t => t.status === 'in_review').length,   color: 'bg-violet-500' },
-                  { label: 'Done',        count: myTasks.filter(t => t.status === 'done').length,        color: 'bg-green-500' },
-                ].map(s => (
-                  <div key={s.label} className="flex items-center gap-3">
-                    <div className={cn('w-2 h-2 rounded-full shrink-0', s.color)} />
-                    <span className="text-xs text-gray-600 dark:text-gray-400 flex-1">{s.label}</span>
-                    <span className="text-xs font-semibold text-gray-900 dark:text-white">{s.count}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Quick actions — Admin/PM only */}
-          {canCreateProject && (
-            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/70 dark:border-gray-800 overflow-hidden">
-              <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-                <BarChart2 size={13} className="text-gray-400" />
-                <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Quick Actions</h2>
-              </div>
-              <div className="p-3 grid grid-cols-2 gap-2">
-                {[
-                  { label: 'New Project', icon: FolderKanban, to: ROUTES.BOARD },
-                  { label: 'View Team',   icon: CheckSquare,   to: ROUTES.TEAM },
-                ].map(q => (
-                  <Link key={q.label} to={q.to}
-                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50 hover:border-indigo-200 dark:hover:border-indigo-500/30 hover:bg-indigo-50/50 dark:hover:bg-indigo-500/5 transition-all group">
-                    <q.icon size={13} className="text-gray-400 group-hover:text-indigo-500 transition-colors" />
-                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white">{q.label}</span>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

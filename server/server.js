@@ -1,7 +1,9 @@
-const express = require('express');
-const cors    = require('cors');
-const morgan  = require('morgan');
-const dotenv  = require('dotenv');
+const express   = require('express');
+const cors      = require('cors');
+const morgan    = require('morgan');
+const dotenv    = require('dotenv');
+const helmet    = require('helmet');
+const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
 
 dotenv.config();
@@ -15,6 +17,17 @@ require('./models/Task');
 require('./models/Invitation');
 
 const app = express();
+
+/* ─── Security ─── */
+app.use(helmet());
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many requests — please try again in 15 minutes.' },
+});
 
 /* ─── Middleware ─── */
 const isAllowedOrigin = (origin) => {
@@ -39,7 +52,7 @@ app.use(express.json());
 app.use(morgan('dev'));
 
 /* ─── Routes ─── */
-app.use('/api/auth',      require('./routes/authRoutes'));
+app.use('/api/auth',      authLimiter, require('./routes/authRoutes'));
 app.use('/api/users',     require('./routes/userRoutes'));
 app.use('/api/projects',  require('./routes/projectRoutes')); /* tasks nested inside: /api/projects/:id/tasks */
 app.use('/api/workspace', require('./routes/workspaceRoutes'));

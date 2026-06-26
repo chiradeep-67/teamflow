@@ -14,8 +14,27 @@ router.get('/', requireProjectMember, async (req, res) => {
       organizationId: req.user.organizationId,
     })
       .populate('assignedTo', 'name avatar')
-      .populate('createdBy',  'name avatar');
+      .populate('createdBy',  'name avatar')
+      .populate('comments.author', 'name avatar');
     res.json({ success: true, tasks });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+/* ── GET /api/projects/:id/tasks/:taskId — single task ───────────────────── */
+router.get('/:taskId', requireProjectMember, async (req, res) => {
+  try {
+    const task = await Task.findOne({
+      _id:            req.params.taskId,
+      project:        req.params.id,
+      organizationId: req.user.organizationId,
+    })
+      .populate('assignedTo', 'name avatar email')
+      .populate('createdBy',  'name avatar email')
+      .populate('comments.author', 'name avatar');
+    if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
+    res.json({ success: true, task });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -57,7 +76,11 @@ router.put('/:taskId', requireProjectMember, async (req, res) => {
       }
     }
 
-    const updateBody = { ...req.body };
+    const ALLOWED = ['title', 'description', 'status', 'priority', 'tags', 'assignedTo', 'dueDate', 'estimatedTime'];
+    const updateBody = {};
+    for (const key of ALLOWED) {
+      if (key in req.body) updateBody[key] = req.body[key];
+    }
     if (!updateBody.assignedTo) delete updateBody.assignedTo;
     const updated = await Task.findByIdAndUpdate(req.params.taskId, updateBody, { new: true });
     res.json({ success: true, task: updated });
@@ -77,6 +100,7 @@ router.post('/:taskId/comments', requireProjectMember, async (req, res) => {
 
     task.comments.push({ author: req.user._id, text: req.body.text });
     await task.save();
+    await task.populate('comments.author', 'name avatar');
     res.json({ success: true, task });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

@@ -39,7 +39,7 @@ export default function LoginPage() {
     if (Object.keys(e).length) { setErrors(e); return; }
     setErrors({});
     const result = await login(form);
-    if (result.success) navigate(ROUTES.DASHBOARD);
+    if (result.success) navigate(result.mustChangePassword ? ROUTES.CHANGE_PASSWORD : ROUTES.BOARD);
     else setServerError(result.error);
   };
 

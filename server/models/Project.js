@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const Task     = require('./Task');
 
 const ProjectMemberSchema = new mongoose.Schema({
   user:        { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -34,6 +35,14 @@ ProjectSchema.virtual('taskCount', {
   localField:   '_id',
   foreignField: 'project',
   count:        true,
+});
+
+ProjectSchema.index({ organizationId: 1 });
+ProjectSchema.index({ 'members.user': 1 });
+
+ProjectSchema.pre('findOneAndDelete', async function () {
+  const doc = await this.model.findOne(this.getFilter());
+  if (doc) await Task.deleteMany({ project: doc._id });
 });
 
 module.exports = mongoose.model('Project', ProjectSchema);

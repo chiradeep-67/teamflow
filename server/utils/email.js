@@ -132,7 +132,7 @@ const sendInviteEmail = async ({ to, invitedBy, workspaceName, role, inviteLink 
                       <a href="${inviteLink}" style="color:#4f46e5;word-break:break-all;">${inviteLink}</a>
                     </p>
                     <p style="margin:12px 0 0;font-size:11px;color:#cbd5e1;">
-                      This invite expires in 7 days. If you didn't expect this, you can ignore this email.
+                      This invite expires in 24 hours. If you didn't expect this, you can ignore this email.
                     </p>
                   </td>
                 </tr>
@@ -162,7 +162,7 @@ const sendInviteEmail = async ({ to, invitedBy, workspaceName, role, inviteLink 
     to,
     subject: `You're invited to join ${workspaceName} on TeamFlow`,
     html,
-    text: `${invitedBy} has invited you to join ${workspaceName} on TeamFlow as ${label}.\n\nAccept your invitation: ${inviteLink}\n\nThis invite expires in 7 days.`,
+    text: `${invitedBy} has invited you to join ${workspaceName} on TeamFlow as ${label}.\n\nAccept your invitation: ${inviteLink}\n\nThis invite expires in 24 hours.`,
   });
 
   return { sent: true };

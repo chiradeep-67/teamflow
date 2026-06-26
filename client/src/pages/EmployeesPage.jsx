@@ -11,6 +11,8 @@ import { usersAPI } from '../services/api';
 import { ROLE_LABELS } from '../utils/permissions';
 import { cn } from '../utils/cn';
 
+const DIRECT_ROLES = ['project_manager', 'team_lead', 'member'];
+
 const SPECIALTIES = [
   'Frontend', 'Backend', 'Full Stack', 'Mobile',
   'Design / UI', 'QA / Testing', 'DevOps', 'Data / Analytics',

@@ -90,7 +90,7 @@ export default function OnboardingPage() {
       });
       setWorkspace(data.workspace);
       localStorage.removeItem('tf_company');
-      navigate(ROUTES.DASHBOARD);
+      navigate(ROUTES.BOARD);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create workspace. Please try again.');
       setSaving(false);

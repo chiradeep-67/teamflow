@@ -80,7 +80,7 @@ export default function CreateOrgPage() {
     setLoading(false);
     if (result.success) {
       setStep(2);
-      setTimeout(() => navigate(ROUTES.DASHBOARD), 1800);
+      setTimeout(() => navigate('/onboarding'), 1800);
     } else {
       setError(result.error || 'Failed to create organisation. Please try again.');
     }

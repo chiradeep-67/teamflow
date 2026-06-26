@@ -28,4 +28,8 @@ const TaskSchema = new mongoose.Schema({
   comments: [CommentSchema],
 }, { timestamps: true });
 
+TaskSchema.index({ project: 1, organizationId: 1 });
+TaskSchema.index({ assignedTo: 1 });
+TaskSchema.index({ status: 1 });
+
 module.exports = mongoose.model('Task', TaskSchema);

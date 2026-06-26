@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Plus, Search, FolderKanban, Clock, Users, X, Loader2, Calendar,
-  CheckSquare, AlertCircle, TrendingUp, Activity, BarChart2, Settings,
+  CheckSquare, AlertCircle, TrendingUp, BarChart2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { RoleBadge } from '../components/common/RoleBadge';
@@ -228,7 +228,6 @@ export default function ProjectsPage() {
   const roleCopy = ROLE_COPY[role] ?? ROLE_COPY.member;
   const canCreateProject = role === 'project_manager';
   const canManageTeam = ['admin', 'project_manager'].includes(role);
-  const canViewTeam = ['admin', 'project_manager', 'team_lead'].includes(role);
   const canViewReports = ['admin', 'project_manager', 'team_lead'].includes(role);
 
   const [projects, setProjects]       = useState([]);
@@ -310,13 +309,6 @@ export default function ProjectsPage() {
     { label: 'Completion Rate', value: `${pct}%`,      sub: `${done.length} of ${myTasks.length} tasks`, icon: TrendingUp, color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-500/10' },
   ];
 
-  const quickActions = [
-    ...(canCreateProject ? [{ label: 'New Project', icon: FolderKanban, action: () => setShowModal(true) }] : []),
-    ...(canViewTeam ? [{ label: role === 'admin' ? 'Manage Team' : role === 'project_manager' ? 'Assign Team' : 'Team Members', icon: Users, to: ROUTES.TEAM }] : []),
-    ...(canViewReports ? [{ label: 'Reports', icon: BarChart2, to: ROUTES.REPORTS }] : []),
-    ...(role === 'admin' ? [{ label: 'Settings', icon: Settings, to: ROUTES.SETTINGS }] : []),
-  ];
-
   const FILTERS = [
     { key: 'all', label: 'All' },
     { key: 'active', label: 'Active' },
@@ -389,11 +381,8 @@ export default function ProjectsPage() {
         ))}
       </div>
 
-      {/* Recent Tasks + Sidebar */}
-      <div className="grid lg:grid-cols-3 gap-5">
-
-        {/* Recent Tasks */}
-        <div className="lg:col-span-2 bg-white dark:bg-gray-900 rounded-xl border border-gray-200/70 dark:border-gray-800 overflow-hidden">
+      {/* Recent Tasks */}
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/70 dark:border-gray-800 overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
             <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
               {roleCopy.taskLabel}
@@ -429,60 +418,6 @@ export default function ProjectsPage() {
               ))}
             </div>
           )}
-        </div>
-
-        {/* Right sidebar */}
-        <div className="space-y-5">
-
-          {/* Task Overview */}
-          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/70 dark:border-gray-800 overflow-hidden">
-            <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-              <Activity size={13} className="text-gray-400" />
-              <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Task Overview</h2>
-            </div>
-            <div className="p-4 space-y-3">
-              {[
-                { label: 'To Do',       count: myTasks.filter(t => t.status === 'todo').length,        color: 'bg-gray-400' },
-                { label: 'In Progress', count: myTasks.filter(t => t.status === 'in_progress').length, color: 'bg-indigo-500' },
-                { label: 'In Review',   count: myTasks.filter(t => t.status === 'in_review').length,   color: 'bg-violet-500' },
-                { label: 'Done',        count: myTasks.filter(t => t.status === 'done').length,        color: 'bg-green-500' },
-                { label: 'Cancelled',   count: myTasks.filter(t => t.status === 'cancelled').length,   color: 'bg-red-400' },
-              ].map(s => (
-                <div key={s.label} className="flex items-center gap-3">
-                  <div className={cn('w-2 h-2 rounded-full shrink-0', s.color)} />
-                  <span className="text-xs text-gray-600 dark:text-gray-400 flex-1">{s.label}</span>
-                  <span className="text-xs font-semibold text-gray-900 dark:text-white">{s.count}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {quickActions.length > 0 && (
-            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/70 dark:border-gray-800 overflow-hidden">
-              <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-                <BarChart2 size={13} className="text-gray-400" />
-                <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Quick Actions</h2>
-              </div>
-              <div className="p-3 grid grid-cols-2 gap-2">
-                {quickActions.map(q => (
-                  q.to ? (
-                    <Link key={q.label} to={q.to}
-                      className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50 hover:border-indigo-200 dark:hover:border-indigo-500/30 hover:bg-indigo-50/50 dark:hover:bg-indigo-500/5 transition-all group">
-                      <q.icon size={13} className="text-gray-400 group-hover:text-indigo-500 transition-colors" />
-                      <span className="text-xs font-medium text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white">{q.label}</span>
-                    </Link>
-                  ) : (
-                    <button key={q.label} onClick={q.action}
-                      className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50 hover:border-indigo-200 dark:hover:border-indigo-500/30 hover:bg-indigo-50/50 dark:hover:bg-indigo-500/5 transition-all group">
-                      <q.icon size={13} className="text-gray-400 group-hover:text-indigo-500 transition-colors" />
-                      <span className="text-xs font-medium text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white">{q.label}</span>
-                    </button>
-                  )
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Projects section */}

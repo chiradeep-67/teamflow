@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   FolderKanban, Users, Settings, LogOut, Menu, X, Sun, Moon,
-  Bell, BarChart2, Building2,
+  Bell, BarChart2, Building2, LayoutDashboard,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -33,11 +33,12 @@ function UserAvatar({ user, size = 'md' }) {
 }
 
 const NAV_ITEMS = [
-  { label: 'Board',        icon: FolderKanban, href: ROUTES.BOARD,      roles: null, activePrefixes: ['/projects'] },
-  { label: 'Reports',      icon: BarChart2,    href: ROUTES.REPORTS,    roles: ['admin', 'project_manager', 'team_lead'] },
-  { label: 'Team Members', icon: Users,        href: ROUTES.TEAM,       roles: ['admin', 'project_manager', 'team_lead'] },
-  { label: 'Employees',    icon: Building2,    href: ROUTES.EMPLOYEES,  roles: ['admin'] },
-  { label: 'Settings',     icon: Settings,     href: ROUTES.SETTINGS,   roles: ['admin'] },
+  { label: 'Dashboard',    icon: LayoutDashboard, href: ROUTES.DASHBOARD, roles: null },
+  { label: 'Board',        icon: FolderKanban,    href: ROUTES.BOARD,     roles: null, activePrefixes: ['/projects'] },
+  { label: 'Reports',      icon: BarChart2,       href: ROUTES.REPORTS,   roles: ['admin', 'project_manager', 'team_lead'] },
+  { label: 'Team Members', icon: Users,           href: ROUTES.TEAM,      roles: ['admin', 'project_manager', 'team_lead'] },
+  { label: 'Employees',    icon: Building2,       href: ROUTES.EMPLOYEES, roles: ['admin'] },
+  { label: 'Settings',     icon: Settings,        href: ROUTES.SETTINGS,  roles: ['admin'] },
 ];
 
 function NavItem({ item, collapsed, onClick }) {
