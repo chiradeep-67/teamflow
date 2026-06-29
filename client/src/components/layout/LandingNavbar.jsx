@@ -91,7 +91,7 @@ export function LandingNavbar() {
               Sign in
             </Link>
             <Link
-              to={ROUTES.REGISTER}
+              to={ROUTES.CREATE_ORG}
               className="px-4 py-1.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors duration-150"
             >
               Get started
@@ -122,7 +122,7 @@ export function LandingNavbar() {
           ))}
           <div className="pt-2 border-t border-gray-100 dark:border-gray-800 flex gap-2">
             <Link to={ROUTES.LOGIN} onClick={() => setMobileOpen(false)} className="flex-1 text-center py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 rounded-lg">Sign in</Link>
-            <Link to={ROUTES.REGISTER} onClick={() => setMobileOpen(false)} className="flex-1 text-center py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg">Get started</Link>
+            <Link to={ROUTES.CREATE_ORG} onClick={() => setMobileOpen(false)} className="flex-1 text-center py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg">Get started</Link>
           </div>
         </div>
       )}

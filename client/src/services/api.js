@@ -86,4 +86,11 @@ export const invitesAPI = {
   revoke:  (id)    => api.delete(`/invites/${id}`),
 };
 
+/* ─── Notifications ─── */
+export const notificationsAPI = {
+  getAll:  ()   => api.get('/notifications'),
+  markOne: (id) => api.patch(`/notifications/${id}/read`),
+  markAll: ()   => api.patch('/notifications/read-all'),
+};
+
 export default api;

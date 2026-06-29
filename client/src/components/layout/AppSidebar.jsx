@@ -1,14 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   FolderKanban, Users, Settings, LogOut, Menu, X, Sun, Moon,
-  Bell, BarChart2, Building2, LayoutDashboard,
+  Bell, BarChart2, Building2, LayoutDashboard, CheckCheck,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { RoleBadge } from '../common/RoleBadge';
 import { ROUTES } from '../../utils/constants';
 import { cn } from '../../utils/cn';
+import { notificationsAPI } from '../../services/api';
 
 const AVATAR_COLORS = {
   SC: 'from-red-500 to-rose-600',
@@ -33,7 +34,7 @@ function UserAvatar({ user, size = 'md' }) {
 }
 
 const NAV_ITEMS = [
-  { label: 'Dashboard',    icon: LayoutDashboard, href: ROUTES.DASHBOARD, roles: null },
+  { label: 'Dashboard',    icon: LayoutDashboard, href: ROUTES.DASHBOARD, roles: ['admin', 'project_manager', 'team_lead'] },
   { label: 'Board',        icon: FolderKanban,    href: ROUTES.BOARD,     roles: null, activePrefixes: ['/projects'] },
   { label: 'Reports',      icon: BarChart2,       href: ROUTES.REPORTS,   roles: ['admin', 'project_manager', 'team_lead'] },
   { label: 'Team Members', icon: Users,           href: ROUTES.TEAM,      roles: ['admin', 'project_manager', 'team_lead'] },
@@ -71,8 +72,12 @@ export function AppSidebar() {
   const { user, logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed]       = useState(false);
+  const [mobileOpen, setMobileOpen]     = useState(false);
+  const [notifOpen, setNotifOpen]       = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount]   = useState(0);
+  const notifRef = useRef(null);
 
   const visibleItems = NAV_ITEMS.filter(
     item => !item.roles || item.roles.includes(user?.systemRole)
@@ -81,6 +86,62 @@ export function AppSidebar() {
   const handleLogout = () => {
     logout();
     navigate(ROUTES.LOGIN);
+  };
+
+  const fetchNotifications = async () => {
+    try {
+      const { data } = await notificationsAPI.getAll();
+      setNotifications(data.notifications || []);
+      setUnreadCount(data.unreadCount || 0);
+    } catch { /* silently ignore */ }
+  };
+
+  useEffect(() => {
+    if (!user) return;
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000); // poll every 30s
+    return () => clearInterval(interval);
+  }, [user]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handler = (e) => {
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
+        setNotifOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleBellClick = () => {
+    setNotifOpen(v => !v);
+  };
+
+  const handleMarkAll = async () => {
+    await notificationsAPI.markAll();
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setUnreadCount(0);
+  };
+
+  const handleMarkOne = async (id, link) => {
+    await notificationsAPI.markOne(id);
+    setNotifications(prev => prev.map(n => n._id === id ? { ...n, read: true } : n));
+    setUnreadCount(prev => Math.max(0, prev - 1));
+    if (link) {
+      setNotifOpen(false);
+      navigate(link);
+    }
+  };
+
+  const timeAgo = (dateStr) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1)  return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24)  return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
   };
 
   const SidebarContent = ({ onLinkClick }) => (
@@ -110,14 +171,66 @@ export function AppSidebar() {
         </button>
       </div>
 
-      {/* Notifications hint */}
+      {/* Notifications */}
       {!collapsed && (
-        <div className="px-3 pt-3">
-          <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+        <div className="px-3 pt-3" ref={notifRef}>
+          <button
+            onClick={handleBellClick}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          >
             <Bell size={14} />
             <span>Notifications</span>
-            <span className="ml-auto w-4 h-4 rounded-full bg-indigo-500 text-white text-[9px] font-bold flex items-center justify-center">3</span>
+            {unreadCount > 0 && (
+              <span className="ml-auto w-4 h-4 rounded-full bg-indigo-500 text-white text-[9px] font-bold flex items-center justify-center">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
           </button>
+
+          {/* Dropdown */}
+          {notifOpen && (
+            <div className="mt-1 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg overflow-hidden z-50">
+              {/* Header */}
+              <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100 dark:border-gray-800">
+                <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">Notifications</span>
+                {unreadCount > 0 && (
+                  <button
+                    onClick={handleMarkAll}
+                    className="flex items-center gap-1 text-[10px] text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+                  >
+                    <CheckCheck size={11} />
+                    Mark all read
+                  </button>
+                )}
+              </div>
+
+              {/* List */}
+              <div className="max-h-60 overflow-y-auto divide-y divide-gray-50 dark:divide-gray-800">
+                {notifications.length === 0 ? (
+                  <p className="text-xs text-gray-400 dark:text-gray-600 text-center py-5">No notifications yet</p>
+                ) : (
+                  notifications.map(n => (
+                    <div
+                      key={n._id}
+                      onClick={() => handleMarkOne(n._id, n.link)}
+                      className={cn(
+                        'px-3 py-2.5 transition-colors',
+                        n.link ? 'cursor-pointer' : n.read ? 'cursor-default' : 'cursor-pointer',
+                        n.read
+                          ? 'bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/40'
+                          : 'bg-indigo-50/60 dark:bg-indigo-500/5 hover:bg-indigo-50 dark:hover:bg-indigo-500/10'
+                      )}
+                    >
+                      <p className={cn('text-xs leading-snug', n.read ? 'text-gray-500 dark:text-gray-400' : 'text-gray-800 dark:text-gray-100 font-medium')}>
+                        {n.message}
+                      </p>
+                      <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-0.5">{timeAgo(n.createdAt)}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

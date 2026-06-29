@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   FolderKanban, CheckSquare, AlertCircle, TrendingUp,
   Plus, ArrowRight, Clock, Loader2,
@@ -34,6 +34,7 @@ function Avatar({ name = '', size = 'sm' }) {
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const canCreateProject = user?.systemRole === 'project_manager';
   const { can } = usePermissions();
 
@@ -72,7 +73,7 @@ export default function DashboardPage() {
     return () => { cancelled = true; };
   }, []);
 
-  const myTasks = user?.systemRole === 'member' || user?.systemRole === 'client'
+  const myTasks = user?.systemRole === 'member'
     ? allTasks.filter(t => (t.assignedTo?._id || t.assignedTo) === user.id)
     : allTasks;
 
@@ -142,7 +143,7 @@ export default function DashboardPage() {
         <div className="lg:col-span-2 bg-white dark:bg-gray-900 rounded-xl border border-gray-200/70 dark:border-gray-800 overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
             <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
-              {user?.systemRole === 'member' || user?.systemRole === 'client' ? 'My Tasks' : 'Recent Tasks'}
+              {user?.systemRole === 'member' ? 'My Tasks' : 'Recent Tasks'}
             </h2>
             <Link to={ROUTES.BOARD} className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline flex items-center gap-1">
               View projects <ArrowRight size={11} />
@@ -156,30 +157,35 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="divide-y divide-gray-100 dark:divide-gray-800">
-              {myTasks.slice(0, 7).map(task => (
-                <div
-                  key={task._id}
-                  className="flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
-                >
-                  <div className={cn('w-2 h-2 rounded-full shrink-0', PRIORITY_DOT[task.priority])} />
-                  <div className="flex-1 min-w-0">
-                    <p className={cn('text-sm font-medium truncate', task.status === 'done' ? 'line-through text-gray-400 dark:text-gray-600' : 'text-gray-800 dark:text-gray-200')}>
-                      {task.title}
-                    </p>
-                    {task.dueDate && (
-                      <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5 flex items-center gap-1">
-                        <Clock size={10} />{new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              {myTasks.slice(0, 7).map(task => {
+                const projectId = task.project?._id || task.project;
+                const taskPath = projectId ? `/projects/${projectId}/tasks/${task._id}` : null;
+                return (
+                  <div
+                    key={task._id}
+                    onClick={() => taskPath && navigate(taskPath)}
+                    className={cn('flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors', taskPath && 'cursor-pointer')}
+                  >
+                    <div className={cn('w-2 h-2 rounded-full shrink-0', PRIORITY_DOT[task.priority])} />
+                    <div className="flex-1 min-w-0">
+                      <p className={cn('text-sm font-medium truncate', task.status === 'done' ? 'line-through text-gray-400 dark:text-gray-600' : 'text-gray-800 dark:text-gray-200')}>
+                        {task.title}
                       </p>
-                    )}
+                      {task.dueDate && (
+                        <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5 flex items-center gap-1">
+                          <Clock size={10} />{new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={cn('hidden sm:inline text-[10px] font-medium px-2 py-0.5 rounded-md', STATUS_STYLES[task.status])}>
+                        {STATUS_LABEL[task.status]}
+                      </span>
+                      {task.assignedTo && <Avatar name={task.assignedTo.name || ''} />}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className={cn('hidden sm:inline text-[10px] font-medium px-2 py-0.5 rounded-md', STATUS_STYLES[task.status])}>
-                      {STATUS_LABEL[task.status]}
-                    </span>
-                    {task.assignedTo && <Avatar name={task.assignedTo.name || ''} />}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

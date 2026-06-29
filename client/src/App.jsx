@@ -64,6 +64,12 @@ function RequireRole({ roles, children }) {
   return children;
 }
 
+function DashboardRoute() {
+  const { user } = useAuth();
+  if (user?.systemRole === 'member') return <Navigate to={ROUTES.BOARD} replace />;
+  return <DashboardPage />;
+}
+
 /* ─── 404 page ─────────────────────────────────────────────────────────── */
 function NotFoundPage() {
   return (
@@ -81,19 +87,6 @@ function NotFoundPage() {
       >
         Go home
       </a>
-    </div>
-  );
-}
-
-/* ─── Placeholder pages ─────────────────────────────────────────────────── */
-function ComingSoon({ title }) {
-  return (
-    <div className="flex flex-col items-center justify-center h-full p-12 text-center">
-      <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center mx-auto mb-4">
-        <span className="text-2xl">🚧</span>
-      </div>
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{title}</h2>
-      <p className="text-sm text-gray-400 dark:text-gray-600">This page is coming in the next sprint.</p>
     </div>
   );
 }
@@ -127,7 +120,7 @@ export default function App() {
 
                 {/* Protected — all share the sidebar layout */}
                 <Route element={<ProtectedLayout />}>
-                  <Route path={ROUTES.DASHBOARD} element={<DashboardPage />} />
+                  <Route path={ROUTES.DASHBOARD} element={<DashboardRoute />} />
                   <Route path={ROUTES.BOARD}     element={<ProjectsPage />} />
                   <Route path={ROUTES.PROJECTS}  element={<Navigate to={ROUTES.BOARD} replace />} />
                   <Route path="/projects/:id"    element={<ProjectDetailPage />} />

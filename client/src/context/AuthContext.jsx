@@ -30,10 +30,13 @@ export function AuthProvider({ children }) {
     if (!user) {
       authAPI.me()
         .then(res => { setUser(res.data.user); return loadWorkspace(); })
-        .catch(() => {
-          localStorage.removeItem(TOKEN_KEY);
-          localStorage.removeItem(USER_KEY);
-          setUser(null);
+        .catch((err) => {
+          // Only clear credentials on a real auth failure (401), not network/timeout errors
+          if (err.response?.status === 401) {
+            localStorage.removeItem(TOKEN_KEY);
+            localStorage.removeItem(USER_KEY);
+            setUser(null);
+          }
           setWorkspaceLoaded(true);
         });
     } else {
@@ -119,6 +122,16 @@ export function AuthProvider({ children }) {
     }
   };
 
+  /* ─── Update user (profile save) ─── */
+  const updateUser = (fields) => {
+    setUser(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...fields };
+      localStorage.setItem(USER_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   /* ─── Logout ─── */
   const logout = () => {
     localStorage.removeItem(TOKEN_KEY);
@@ -169,6 +182,7 @@ export function AuthProvider({ children }) {
       createOrg,
       changePassword,
       logout,
+      updateUser,
       getAccessibleProjects,
       getProjectRole,
     }}>

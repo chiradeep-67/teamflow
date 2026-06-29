@@ -249,7 +249,7 @@ export default function CreateOrgPage() {
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">You're all set!</h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                   <strong className="text-gray-700 dark:text-gray-200">{form.orgName}</strong> is ready.<br />
-                  Taking you to your dashboard…
+                  Setting up your workspace…
                 </p>
               </div>
               <Loader2 size={18} className="animate-spin text-indigo-500 mt-2" />

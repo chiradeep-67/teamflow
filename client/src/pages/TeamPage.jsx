@@ -903,7 +903,7 @@ export default function TeamPage() {
                         </div>
 
                         <div>
-                          {isPMOrAbove && member._id !== user?.id ? (
+                          {isAdmin && member._id !== user?.id ? (
                             <DesignationDropdown
                               userId={member._id}
                               currentRole={
@@ -911,7 +911,7 @@ export default function TeamPage() {
                                 (member.systemRole === 'project_manager' ? 'project_manager' : undefined)
                               }
                               onRoleChange={handleDesignationChange}
-                              canSetPM={isAdmin}
+                              canSetPM={true}
                             />
                           ) : (
                             <ProjectDesignationBadge

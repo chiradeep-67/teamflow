@@ -81,18 +81,32 @@ export default function OnboardingPage() {
     setSaving(true);
     setError('');
     try {
-      const { data } = await workspaceAPI.create({
+      const payload = {
         name:        form.name.trim(),
         slug:        form.slug,
         industry:    form.industry,
         size:        form.size,
         departments: form.departments,
-      });
+      };
+      // Workspace is already created by create-org; update it with onboarding details
+      let data;
+      try {
+        const res = await workspaceAPI.update(payload);
+        data = res.data;
+      } catch (updateErr) {
+        // Fallback: if workspace somehow doesn't exist yet, create it
+        if (updateErr.response?.status === 404) {
+          const res = await workspaceAPI.create(payload);
+          data = res.data;
+        } else {
+          throw updateErr;
+        }
+      }
       setWorkspace(data.workspace);
       localStorage.removeItem('tf_company');
       navigate(ROUTES.BOARD);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create workspace. Please try again.');
+      setError(err.response?.data?.message || 'Failed to save workspace. Please try again.');
       setSaving(false);
     }
   };

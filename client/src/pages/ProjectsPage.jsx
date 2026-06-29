@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Plus, Search, FolderKanban, Clock, Users, X, Loader2, Calendar,
   CheckSquare, AlertCircle, TrendingUp, BarChart2,
@@ -54,12 +54,6 @@ const ROLE_COPY = {
   member: {
     title: 'My Workspace',
     scope: 'You can focus on your assigned projects, tasks, due dates, and updates.',
-    projectLabel: 'Assigned Projects',
-    taskLabel: 'My Tasks',
-  },
-  client: {
-    title: 'My Workspace',
-    scope: 'You can follow assigned work, project progress, and task updates.',
     projectLabel: 'Assigned Projects',
     taskLabel: 'My Tasks',
   },
@@ -224,6 +218,7 @@ function ProjectCard({ project, taskCount, doneCount, userRole }) {
 /* ─── Page ─── */
 export default function ProjectsPage() {
   const { user, getProjectRole } = useAuth();
+  const navigate = useNavigate();
   const role = user?.systemRole;
   const roleCopy = ROLE_COPY[role] ?? ROLE_COPY.member;
   const canCreateProject = role === 'project_manager';
@@ -290,7 +285,7 @@ export default function ProjectsPage() {
   };
 
   /* ─── Derived stats ─── */
-  const myTasks = ['member', 'client'].includes(role)
+  const myTasks = role === 'member'
     ? allTasks.filter(t => (t.assignedTo?._id || t.assignedTo) === user.id)
     : allTasks;
 
@@ -395,27 +390,35 @@ export default function ProjectsPage() {
             </div>
           ) : (
             <div className="divide-y divide-gray-100 dark:divide-gray-800">
-              {myTasks.slice(0, 7).map(task => (
-                <div key={task._id} className="flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
-                  <div className={cn('w-2 h-2 rounded-full shrink-0', PRIORITY_DOT[task.priority])} />
-                  <div className="flex-1 min-w-0">
-                    <p className={cn('text-sm font-medium truncate', task.status === 'done' ? 'line-through text-gray-400 dark:text-gray-600' : 'text-gray-800 dark:text-gray-200')}>
-                      {task.title}
-                    </p>
-                    {task.dueDate && (
-                      <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5 flex items-center gap-1">
-                        <Clock size={10} />{new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              {myTasks.slice(0, 7).map(task => {
+                const projectId = task.project?._id || task.project;
+                const taskPath = projectId ? `/projects/${projectId}/tasks/${task._id}` : null;
+                return (
+                  <div
+                    key={task._id}
+                    onClick={() => taskPath && navigate(taskPath)}
+                    className={cn('flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors', taskPath && 'cursor-pointer')}
+                  >
+                    <div className={cn('w-2 h-2 rounded-full shrink-0', PRIORITY_DOT[task.priority])} />
+                    <div className="flex-1 min-w-0">
+                      <p className={cn('text-sm font-medium truncate', task.status === 'done' ? 'line-through text-gray-400 dark:text-gray-600' : 'text-gray-800 dark:text-gray-200')}>
+                        {task.title}
                       </p>
-                    )}
+                      {task.dueDate && (
+                        <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5 flex items-center gap-1">
+                          <Clock size={10} />{new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={cn('hidden sm:inline text-[10px] font-medium px-2 py-0.5 rounded-md', TASK_STATUS_STYLES[task.status])}>
+                        {TASK_STATUS_LABEL[task.status]}
+                      </span>
+                      {task.assignedTo && <Avatar name={task.assignedTo.name || ''} />}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className={cn('hidden sm:inline text-[10px] font-medium px-2 py-0.5 rounded-md', TASK_STATUS_STYLES[task.status])}>
-                      {TASK_STATUS_LABEL[task.status]}
-                    </span>
-                    {task.assignedTo && <Avatar name={task.assignedTo.name || ''} />}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
       </div>

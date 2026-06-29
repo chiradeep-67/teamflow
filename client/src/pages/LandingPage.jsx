@@ -130,7 +130,7 @@ function HeroSection() {
         {/* CTAs */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16">
           <Link
-            to={ROUTES.REGISTER}
+            to={ROUTES.CREATE_ORG}
             className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-xl transition-all duration-150"
           >
             Get Started for Free
@@ -387,7 +387,7 @@ function UseCasesSection() {
               ))}
             </ul>
             <Link
-              to={ROUTES.REGISTER}
+              to={ROUTES.CREATE_ORG}
               className={cn('inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors', colors.btn)}
             >
               Get started free <ArrowRight size={14} />
@@ -457,7 +457,7 @@ function CTASection() {
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link
-            to={ROUTES.REGISTER}
+            to={ROUTES.CREATE_ORG}
             className="flex items-center gap-2 px-7 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-xl transition-colors"
           >
             Get Started for Free

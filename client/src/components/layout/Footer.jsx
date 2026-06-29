@@ -4,7 +4,7 @@ import { ROUTES } from '../../utils/constants';
 const FOOTER_LINKS = {
   Product: [
     { label: 'Features', href: '#features' },
-    { label: 'Pricing', href: '#pricing' },
+    { label: 'Pricing', href: '#features' },
     { label: 'Changelog', href: '#' },
     { label: 'Roadmap', href: '#' },
   ],

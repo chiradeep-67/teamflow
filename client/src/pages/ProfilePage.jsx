@@ -24,7 +24,7 @@ function UserAvatar({ user }) {
 }
 
 export default function ProfilePage() {
-  const { user, logout, changePassword, isLoading: authLoading } = useAuth();
+  const { user, logout, changePassword, updateUser, isLoading: authLoading } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
@@ -79,12 +79,14 @@ export default function ProfilePage() {
     setSaving(true);
     setSaveError('');
     try {
-      await usersAPI.update(user.id, {
+      const payload = {
         name:       form.name,
         title:      form.title,
         department: form.department,
         bio:        form.bio,
-      });
+      };
+      await usersAPI.update(user.id, payload);
+      updateUser(payload);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (err) {
@@ -282,22 +284,20 @@ export default function ProfilePage() {
                   <div className={cn('absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200', isDark ? 'translate-x-5' : 'translate-x-0.5')} />
                 </button>
               </div>
-              {[
-                { label: 'Email notifications',    desc: 'Receive emails for task assignments and mentions', checked: true },
-                { label: 'Desktop notifications',  desc: 'Browser push notifications for activity',          checked: false },
-                { label: 'Weekly digest',          desc: 'Get a weekly summary of your tasks and projects',   checked: true },
-              ].map(pref => (
-                <div key={pref.label} className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-800 last:border-0">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">{pref.label}</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">{pref.desc}</p>
+              <div className="pt-2">
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Notification preferences</p>
+                <div className="rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 p-4 flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center shrink-0">
+                    <span className="text-base">🔔</span>
                   </div>
-                  <div className={cn('relative rounded-full', pref.checked ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-700')}
-                    style={{ width: '40px', height: '22px' }}>
-                    <div className={cn('absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200', pref.checked ? 'translate-x-5' : 'translate-x-0.5')} />
+                  <div>
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Email &amp; push notifications</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5 leading-relaxed">
+                      Granular notification settings — coming in the next release. In-app notifications are active now.
+                    </p>
                   </div>
                 </div>
-              ))}
+              </div>
             </div>
           )}
         </div>
