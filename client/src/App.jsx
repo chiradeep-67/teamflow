@@ -9,7 +9,6 @@ import LoginPage           from './pages/LoginPage';
 import RegisterPage        from './pages/RegisterPage';
 import ChangePasswordPage  from './pages/ChangePasswordPage';
 import CreateOrgPage       from './pages/CreateOrgPage';
-import OnboardingPage      from './pages/OnboardingPage';
 import DashboardPage       from './pages/DashboardPage';
 import ProjectsPage        from './pages/ProjectsPage';
 import ProjectDetailPage   from './pages/ProjectDetailPage';
@@ -105,12 +104,6 @@ export default function App() {
                 <Route path={ROUTES.LOGIN}      element={<PublicRoute><LoginPage /></PublicRoute>} />
                 <Route path={ROUTES.REGISTER}   element={<RegisterPage />} />
                 <Route path={ROUTES.CREATE_ORG} element={<PublicRoute><CreateOrgPage /></PublicRoute>} />
-
-                {/* Post-signup onboarding — auth required, no sidebar */}
-                <Route
-                  path="/onboarding"
-                  element={<RequireAuth><OnboardingPage /></RequireAuth>}
-                />
 
                 {/* Force-change-password — auth required, no sidebar */}
                 <Route

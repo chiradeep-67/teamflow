@@ -1,14 +1,22 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Building2, User, Mail, Lock, Phone, Eye, EyeOff,
+  Building2, Users, User, Mail, Lock, Phone, Eye, EyeOff,
   ArrowRight, Check, Loader2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { ROUTES } from '../utils/constants';
 import { cn } from '../utils/cn';
 
-const STEPS = ['Organisation', 'Admin account', 'Done'];
+const STEPS = ['Workspace', 'Admin account', 'Done'];
+
+const TEAM_SIZES = [
+  { value: '1-10',    label: '1–10',    desc: 'Just starting out' },
+  { value: '11-50',   label: '11–50',   desc: 'Small team' },
+  { value: '51-200',  label: '51–200',  desc: 'Growing company' },
+  { value: '201-500', label: '201–500', desc: 'Mid-size business' },
+  { value: '500+',    label: '500+',    desc: 'Enterprise' },
+];
 
 function StrengthBar({ password }) {
   const score = [/.{8,}/, /[A-Z]/, /[0-9]/, /[^A-Za-z0-9]/]
@@ -42,6 +50,7 @@ export default function CreateOrgPage() {
 
   const [form, setForm] = useState({
     orgName:  '',
+    teamSize: '',
     name:     '',
     email:    '',
     password: '',
@@ -51,8 +60,9 @@ export default function CreateOrgPage() {
   const field = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }));
 
   const validateStep0 = () => {
-    if (!form.orgName.trim()) { setError('Organisation name is required'); return false; }
-    if (form.orgName.trim().length < 2) { setError('Organisation name must be at least 2 characters'); return false; }
+    if (!form.orgName.trim()) { setError('Workspace name is required'); return false; }
+    if (form.orgName.trim().length < 2) { setError('Workspace name must be at least 2 characters'); return false; }
+    if (!form.teamSize) { setError('Please choose your team size'); return false; }
     return true;
   };
 
@@ -80,7 +90,7 @@ export default function CreateOrgPage() {
     setLoading(false);
     if (result.success) {
       setStep(2);
-      setTimeout(() => navigate('/onboarding'), 1800);
+      setTimeout(() => navigate(ROUTES.DASHBOARD), 1800);
     } else {
       setError(result.error || 'Failed to create organisation. Please try again.');
     }
@@ -144,10 +154,10 @@ export default function CreateOrgPage() {
                 </div>
               )}
 
-              <div className="space-y-4">
+              <div className="space-y-5">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                    <Building2 size={13} className="text-indigo-500" /> Organisation name
+                    <Building2 size={13} className="text-indigo-500" /> Workspace name
                   </label>
                   <input
                     autoFocus
@@ -158,6 +168,36 @@ export default function CreateOrgPage() {
                     className="h-10 px-3.5 rounded-lg text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all"
                   />
                   <p className="text-xs text-gray-400 dark:text-gray-600">This will be the name of your workspace visible to all members.</p>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                    <Users size={13} className="text-indigo-500" /> How many members?
+                  </label>
+                  <div className="space-y-2">
+                    {TEAM_SIZES.map(s => (
+                      <button
+                        key={s.value}
+                        type="button"
+                        onClick={() => setForm(f => ({ ...f, teamSize: s.value }))}
+                        className={cn(
+                          'w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border text-left transition-all',
+                          form.teamSize === s.value
+                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                        )}
+                      >
+                        <div>
+                          <span className={cn('text-sm font-semibold',
+                            form.teamSize === s.value ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-800 dark:text-gray-200')}>
+                            {s.label} people
+                          </span>
+                          <span className="text-xs text-gray-400 ml-2">{s.desc}</span>
+                        </div>
+                        {form.teamSize === s.value && <Check size={14} className="text-indigo-600 dark:text-indigo-400" />}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -249,7 +289,7 @@ export default function CreateOrgPage() {
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">You're all set!</h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                   <strong className="text-gray-700 dark:text-gray-200">{form.orgName}</strong> is ready.<br />
-                  Setting up your workspace…
+                  Taking you to your dashboard…
                 </p>
               </div>
               <Loader2 size={18} className="animate-spin text-indigo-500 mt-2" />

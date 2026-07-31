@@ -98,7 +98,7 @@ export default function LoginPage() {
       {/* Right: Login form */}
       <div className="flex-1 flex flex-col">
         {/* Top bar */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800/60">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 dark:border-gray-800/60">
           <Link to={ROUTES.HOME} className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center">
               <svg width="12" height="12" viewBox="0 0 30 30" fill="none">
@@ -120,12 +120,15 @@ export default function LoginPage() {
               }
             </button>
             <span className="text-sm text-gray-500 dark:text-gray-400">
-              Access via invite link only
+              New here?{' '}
+              <Link to={ROUTES.CREATE_ORG} className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline">
+                Get started
+              </Link>
             </span>
           </div>
         </div>
 
-        <div className="flex-1 flex items-center justify-center px-6 py-10">
+        <div className="flex-1 flex items-center justify-center px-4 sm:px-6 py-10">
           <div className="w-full max-w-[360px] animate-fade-in">
             <div className="mb-7">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Sign in</h1>

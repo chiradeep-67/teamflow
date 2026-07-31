@@ -51,20 +51,25 @@ function PasswordStrength({ password }) {
   );
 }
 
-/* Shown when no invite token is present */
+/* Shown when no invite token is present — most visitors here are brand new,
+ * so send them straight into self-serve signup instead of a dead end. */
 function InviteRequiredScreen() {
   return (
     <div className="flex flex-col items-center justify-center text-center py-8 px-4">
       <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center mb-4">
         <UserCheck size={26} className="text-indigo-600 dark:text-indigo-400" />
       </div>
-      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Invite required</h2>
+      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Let's get you started</h2>
       <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs leading-relaxed mb-6">
-        TeamFlow is invite-only. Ask your workspace admin to share an invite link with you.
+        New to TeamFlow? Create your own workspace in a couple of minutes — no invite needed.
       </p>
-      <Link to={ROUTES.LOGIN}>
-        <Button variant="secondary" size="sm">Already have an account? Sign in</Button>
+      <Link to={ROUTES.CREATE_ORG} className="w-full max-w-[260px]">
+        <Button fullWidth size="sm" rightIcon={<ArrowRight size={13} />}>Create your workspace</Button>
       </Link>
+      <p className="text-xs text-gray-400 dark:text-gray-600 mt-5 max-w-xs leading-relaxed">
+        Joining an existing team instead? Ask your admin for an invite link, or{' '}
+        <Link to={ROUTES.LOGIN} className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline">sign in</Link>.
+      </p>
     </div>
   );
 }
@@ -136,7 +141,7 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950 flex flex-col">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800/60">
+      <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 dark:border-gray-800/60">
         <Link to={ROUTES.HOME} className="flex items-center gap-2">
           <TeamFlowMark />
           <span className="font-bold text-[15px] tracking-tight text-gray-900 dark:text-white">

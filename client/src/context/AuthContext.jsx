@@ -72,10 +72,10 @@ export function AuthProvider({ children }) {
   };
 
   /* ─── Create org (public signup) ─── */
-  const createOrg = async ({ orgName, name, email, password, phone }) => {
+  const createOrg = async ({ orgName, teamSize, name, email, password, phone }) => {
     setIsLoading(true);
     try {
-      const payload = { orgName, name, email, password };
+      const payload = { orgName, teamSize, name, email, password };
       if (phone) payload.phone = phone;
       const { data } = await authAPI.createOrg(payload);
       _persist(data.token, data.user);

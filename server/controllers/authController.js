@@ -7,6 +7,14 @@ const Workspace    = require('../models/Workspace');
 const generateToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE || '7d' });
 
+// Valid team-size buckets an admin can choose at signup
+const TEAM_SIZES = ['1-10', '11-50', '51-200', '201-500', '500+'];
+
+const DEFAULT_DEPARTMENTS = [
+  'Engineering', 'Design', 'Product', 'Marketing',
+  'Sales', 'Finance', 'Operations', 'HR',
+];
+
 /* Consistent user payload returned on login / register */
 const userPayload = (user) => ({
   id:                 user._id,
@@ -22,9 +30,8 @@ const userPayload = (user) => ({
 });
 
 // ─── GET /api/auth/setup ──────────────────────────────────────────────────
-// Admin accounts are created via seed.js — there is no public first-user flow.
-// Returning needsSetup:false keeps the RegisterPage showing "Invite required"
-// for any visitor who has no invite token.
+// Legacy endpoint, unused by the client — new admins now self-serve via
+// POST /api/auth/create-org, and /register is reserved for invited teammates.
 const getSetupStatus = async (_req, res) => {
   res.json({ success: true, needsSetup: false });
 };
@@ -161,12 +168,19 @@ const changePassword = async (req, res) => {
 
 // ─── POST /api/auth/create-org ────────────────────────────────────────────
 // Public endpoint. Anyone can create a new organisation + admin account.
+// The admin picks the workspace name and expected team size up front, so the
+// workspace is fully usable the moment the account is created — no separate
+// onboarding step required.
 // Creates: Organization → Admin User → Workspace, then returns a JWT (auto-login).
 const createOrg = async (req, res) => {
   try {
-    const { orgName, name, email, password, phone } = req.body;
+    const { orgName, teamSize, name, email, password, phone } = req.body;
 
-    if (!orgName?.trim())   return res.status(400).json({ success: false, message: 'Organisation name is required' });
+    if (!orgName?.trim())   return res.status(400).json({ success: false, message: 'Workspace name is required' });
+    if (!teamSize?.trim())  return res.status(400).json({ success: false, message: 'Team size is required' });
+    if (!TEAM_SIZES.includes(teamSize)) {
+      return res.status(400).json({ success: false, message: 'Invalid team size' });
+    }
     if (!name?.trim())      return res.status(400).json({ success: false, message: 'Your name is required' });
     if (!email?.trim())     return res.status(400).json({ success: false, message: 'Email is required' });
     if (!password)          return res.status(400).json({ success: false, message: 'Password is required' });
@@ -202,9 +216,10 @@ const createOrg = async (req, res) => {
     await Workspace.create({
       name:           orgName.trim(),
       slug,
+      size:           teamSize,
       organizationId: org._id,
       createdBy:      admin._id,
-      departments:    [],
+      departments:    DEFAULT_DEPARTMENTS,
     });
 
     res.status(201).json({
