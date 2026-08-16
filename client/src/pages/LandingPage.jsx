@@ -395,7 +395,7 @@ function UseCasesSection() {
           </div>
 
           {/* Visual panel — metrics card */}
-          <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 space-y-4">
+          <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 space-y-4">
             <div className="flex items-center justify-between mb-1">
               <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Team velocity</p>
               <span className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-500/10 px-2 py-0.5 rounded-full font-medium">+18% this month</span>

@@ -1,5 +1,7 @@
 const Project = require('../models/Project');
 
+const MEMBER_USER_FIELDS = 'name email avatar title systemRole';
+
 /**
  * System-role gate — checks req.user.systemRole.
  * Admin always passes every role gate (top of hierarchy).
@@ -29,7 +31,7 @@ const requireProjectRole = (...roles) => async (req, res, next) => {
     const project = await Project.findOne({
       _id:            req.params.id || req.params.projectId,
       organizationId: req.user.organizationId,
-    }).populate('members.user', 'name email avatar title');
+    }).populate('members.user', MEMBER_USER_FIELDS);
 
     if (!project) {
       return res.status(404).json({ success: false, message: 'Project not found' });
@@ -74,7 +76,7 @@ const requireProjectMember = async (req, res, next) => {
     const project = await Project.findOne({
       _id:            req.params.id || req.params.projectId,
       organizationId: req.user.organizationId,
-    }).populate('members.user', 'name email avatar title');
+    }).populate('members.user', MEMBER_USER_FIELDS);
 
     if (!project) {
       return res.status(404).json({ success: false, message: 'Project not found' });

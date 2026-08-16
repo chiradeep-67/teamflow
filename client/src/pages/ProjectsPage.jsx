@@ -10,6 +10,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { projectsAPI, tasksAPI } from '../services/api';
 import { ROUTES } from '../utils/constants';
+import { PROJECT_DESIGNATION_LABELS } from '../utils/permissions';
 import { cn } from '../utils/cn';
 
 /* ─── Styles / config ─── */
@@ -35,8 +36,8 @@ const COLORS = ['#6366f1','#8b5cf6','#14b8a6','#f59e0b','#ef4444','#22c55e','#ec
 const ROLE_COPY = {
   admin: {
     title: 'Workspace Admin',
-    scope: 'You can see the whole workspace, manage people, review reports, and control settings.',
-    projectLabel: 'Workspace Projects',
+    scope: 'You oversee the whole workspace — view all projects and assigned members. Admins are not assigned to projects or tasks.',
+    projectLabel: 'All Projects',
     taskLabel: 'Workspace Tasks',
   },
   project_manager: {
@@ -93,11 +94,11 @@ function CreateModal({ onClose, onCreate, loading }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
       <div className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/70 dark:border-gray-700 animate-slide-up overflow-hidden max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
           <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Create New Project</h2>
           <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"><X size={15} /></button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto">
           <div>
             <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Color</p>
             <div className="flex gap-2 flex-wrap">
@@ -156,9 +157,10 @@ function CreateModal({ onClose, onCreate, loading }) {
 }
 
 /* ─── Project Card ─── */
-function ProjectCard({ project, taskCount, doneCount, userRole }) {
+function ProjectCard({ project, taskCount, doneCount, userRole, showMemberList }) {
   const pct = taskCount ? Math.round((doneCount / taskCount) * 100) : 0;
   const S   = PROJECT_STATUS_STYLES[project.status] ?? PROJECT_STATUS_STYLES.active;
+  const members = (project.members ?? []).filter(m => m.user);
 
   return (
     <Link to={`/projects/${project._id}`}
@@ -200,6 +202,33 @@ function ProjectCard({ project, taskCount, doneCount, userRole }) {
           </div>
         </div>
 
+        {showMemberList && (
+          <div className="rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-800/40 p-3 space-y-2">
+            <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider">
+              Assigned members
+            </p>
+            {members.length === 0 ? (
+              <p className="text-xs text-gray-400 dark:text-gray-600">No members assigned yet</p>
+            ) : (
+              <div className="space-y-1.5 max-h-28 overflow-y-auto">
+                {members.map(m => {
+                  const u = m.user;
+                  const uid = u._id || u;
+                  const designation = PROJECT_DESIGNATION_LABELS[m.projectRole] ?? m.projectRole;
+                  return (
+                    <div key={uid} className="flex items-center justify-between gap-2 text-xs">
+                      <span className="font-medium text-gray-800 dark:text-gray-200 truncate">{u.name}</span>
+                      <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400">
+                        {designation}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="flex items-center justify-between pt-1">
           <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-600">
             <Clock size={11} />
@@ -207,7 +236,7 @@ function ProjectCard({ project, taskCount, doneCount, userRole }) {
           </div>
           <div className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-600">
             <Users size={11} />
-            <span>{project.members?.length ?? 0}</span>
+            <span>{members.length}</span>
           </div>
         </div>
       </div>
@@ -324,7 +353,7 @@ export default function ProjectsPage() {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -452,6 +481,7 @@ export default function ProjectsPage() {
                 taskCount={taskMap[p._id]?.total ?? 0}
                 doneCount={taskMap[p._id]?.done ?? 0}
                 userRole={getProjectRole(p)}
+                showMemberList={role === 'admin'}
               />
             ))}
           </div>

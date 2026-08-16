@@ -77,7 +77,7 @@ export default function ChangePasswordPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950 flex flex-col">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800/60">
+      <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 dark:border-gray-800/60">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center">
             <svg width="12" height="12" viewBox="0 0 30 30" fill="none">

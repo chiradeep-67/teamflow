@@ -78,7 +78,7 @@ export default function SettingsPage() {
 
   if (!isAdmin) {
     return (
-      <div className="p-6 max-w-2xl mx-auto text-center py-24">
+      <div className="p-4 sm:p-6 max-w-2xl mx-auto text-center py-24">
         <Building2 size={32} className="text-gray-300 dark:text-gray-700 mx-auto mb-3" />
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Admin access required</h2>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -97,7 +97,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="p-6 max-w-2xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 max-w-2xl mx-auto space-y-6">
       <div>
         <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Workspace Settings</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
@@ -112,7 +112,7 @@ export default function SettingsPage() {
       )}
 
       {/* Workspace name */}
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/70 dark:border-gray-800 p-6">
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/70 dark:border-gray-800 p-4 sm:p-6">
         <div className="flex items-center gap-2 mb-4">
           <Building2 size={16} className="text-indigo-500" />
           <h2 className="text-sm font-semibold text-gray-900 dark:text-white">General</h2>
@@ -140,7 +140,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Departments */}
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/70 dark:border-gray-800 p-6">
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/70 dark:border-gray-800 p-4 sm:p-6">
         <div className="flex items-center gap-2 mb-4">
           <Tag size={16} className="text-indigo-500" />
           <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Departments</h2>
@@ -201,7 +201,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Danger zone */}
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-red-100 dark:border-red-500/20 p-6">
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-red-100 dark:border-red-500/20 p-4 sm:p-6">
         <div className="flex items-center gap-2 mb-2">
           <AlertTriangle size={16} className="text-red-500" />
           <h2 className="text-sm font-semibold text-red-600 dark:text-red-400">Danger zone</h2>

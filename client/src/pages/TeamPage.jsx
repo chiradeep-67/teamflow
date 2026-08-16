@@ -170,7 +170,7 @@ function AssignToProjectModal({ onClose, onAssigned }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
       <div className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/70 dark:border-gray-700 shadow-xl overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 dark:border-gray-800">
           <h2 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
             <UserPlus size={15} className="text-indigo-500" /> Assign to Project
           </h2>
@@ -331,7 +331,7 @@ function AssignPMModal({ onClose, onAssigned }) {
       <div className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm" onClick={!done ? onClose : undefined} />
       <div className="relative w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/70 dark:border-gray-700 shadow-xl overflow-hidden">
 
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 dark:border-gray-800">
           <h2 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
             <ShieldCheck size={15} className="text-indigo-500" /> Assign Project Manager
           </h2>
@@ -342,7 +342,7 @@ function AssignPMModal({ onClose, onAssigned }) {
 
         {done ? (
           /* Success state */
-          <div className="p-6 flex flex-col items-center text-center gap-3">
+          <div className="p-4 sm:p-6 flex flex-col items-center text-center gap-3">
             <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-500/10 flex items-center justify-center">
               <Check size={22} className="text-green-600 dark:text-green-400" />
             </div>
@@ -478,7 +478,7 @@ function InviteModal({ allowedRoles, onClose, onInvited }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
       <div className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/70 dark:border-gray-700 shadow-xl overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 dark:border-gray-800">
           <h2 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
             <Mail size={15} className="text-indigo-500" /> Invite via Email
           </h2>
@@ -486,7 +486,7 @@ function InviteModal({ allowedRoles, onClose, onInvited }) {
         </div>
 
         {!result ? (
-          <div className="p-6 space-y-4">
+          <div className="p-4 sm:p-6 space-y-4">
             <Input
               label="Email address" type="email" placeholder="colleague@company.com"
               value={form.email}
@@ -514,7 +514,7 @@ function InviteModal({ allowedRoles, onClose, onInvited }) {
             </div>
           </div>
         ) : (
-          <div className="p-6 space-y-4">
+          <div className="p-4 sm:p-6 space-y-4">
             <div className="flex flex-col items-center text-center py-1">
               <div className="w-11 h-11 rounded-full bg-green-100 dark:bg-green-500/10 flex items-center justify-center mb-3">
                 <Check size={20} className="text-green-600 dark:text-green-400" />
@@ -628,14 +628,14 @@ function ResetPasswordModal({ member, onClose }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
       <div className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm" onClick={!result ? onClose : undefined} />
       <div className="relative w-full max-w-sm bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/70 dark:border-gray-700 shadow-xl overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 dark:border-gray-800">
           <h2 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
             <RefreshCw size={14} className="text-amber-500" /> Reset Password
           </h2>
           <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"><X size={15} /></button>
         </div>
         {!result ? (
-          <div className="p-6 space-y-4">
+          <div className="p-4 sm:p-6 space-y-4">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Generate a new temporary password for <strong className="text-gray-900 dark:text-white">{member.name}</strong>?
             </p>
@@ -647,7 +647,7 @@ function ResetPasswordModal({ member, onClose }) {
             </div>
           </div>
         ) : (
-          <div className="p-6 space-y-4">
+          <div className="p-4 sm:p-6 space-y-4">
             <div className="flex flex-col items-center text-center py-1">
               <div className="w-11 h-11 rounded-full bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center mb-3">
                 <RefreshCw size={18} className="text-amber-600 dark:text-amber-400" />
@@ -766,7 +766,7 @@ export default function TeamPage() {
   const projectMap = Object.fromEntries(projects.map(p => [p._id, p.name]));
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-7">
         <div>

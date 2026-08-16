@@ -87,3 +87,20 @@ export function canInProject(user, project, permission) {
   if (!role) return false;
   return PERMISSIONS[permission]?.includes(role) ?? false;
 }
+
+/** Workspace admins manage the org — they are never assignable to projects or tasks. */
+export function isAssignableUser(user) {
+  if (!user) return false;
+  return user.systemRole !== ROLES.ADMIN;
+}
+
+export const PROJECT_DESIGNATION_LABELS = {
+  project_manager: 'Project Manager',
+  team_lead:       'Team Lead',
+  member:          'Member',
+};
+
+/** Project members who can be assigned tasks (excludes workspace admin). */
+export function getAssignableProjectMembers(project) {
+  return (project?.members ?? []).filter(m => m.user && isAssignableUser(m.user));
+}

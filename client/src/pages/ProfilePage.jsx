@@ -118,7 +118,7 @@ export default function ProfilePage() {
   const TABS = ['Profile', 'Security', 'Preferences'];
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <div className="mb-6">
         <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Account Settings</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Manage your profile, security, and preferences</p>
@@ -127,7 +127,7 @@ export default function ProfilePage() {
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Left — avatar + stats */}
         <div className="space-y-4">
-          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/70 dark:border-gray-800 p-6 text-center">
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/70 dark:border-gray-800 p-4 sm:p-6 text-center">
             <UserAvatar user={user} />
             <h2 className="text-base font-semibold text-gray-900 dark:text-white">{user?.name}</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{user?.title || 'Team Member'}</p>
@@ -174,7 +174,7 @@ export default function ProfilePage() {
 
           {/* Profile tab */}
           {tab === 'Profile' && (
-            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/70 dark:border-gray-800 p-6">
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/70 dark:border-gray-800 p-4 sm:p-6">
               <form onSubmit={handleSave} className="space-y-4">
                 {saveError && (
                   <div className="p-3 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200/70 dark:border-red-500/20 text-red-600 dark:text-red-400 text-sm">
@@ -213,7 +213,7 @@ export default function ProfilePage() {
 
           {/* Security tab */}
           {tab === 'Security' && (
-            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/70 dark:border-gray-800 p-6 space-y-5">
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/70 dark:border-gray-800 p-4 sm:p-6 space-y-5">
               <div className="flex items-start gap-3 p-3 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 rounded-xl">
                 <Shield size={15} className="text-indigo-600 dark:text-indigo-400 mt-0.5 shrink-0" />
                 <p className="text-xs text-indigo-700 dark:text-indigo-300 leading-relaxed">
@@ -272,7 +272,7 @@ export default function ProfilePage() {
 
           {/* Preferences tab */}
           {tab === 'Preferences' && (
-            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/70 dark:border-gray-800 p-6 space-y-5">
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/70 dark:border-gray-800 p-4 sm:p-6 space-y-5">
               <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-800">
                 <div>
                   <p className="text-sm font-medium text-gray-900 dark:text-white">Dark mode</p>

@@ -11,6 +11,7 @@ import { tasksAPI, projectsAPI, usersAPI } from '../services/api';
 import { RoleBadge } from '../components/common/RoleBadge';
 import { Button } from '../components/ui/Button';
 import { cn } from '../utils/cn';
+import { getAssignableProjectMembers } from '../utils/permissions';
 
 /* ─── Config ─── */
 const PRIORITY_MAP = {
@@ -233,6 +234,8 @@ export default function TaskDetailPage() {
     }
   };
 
+  const assignableMembers = getAssignableProjectMembers(project);
+
   /* ─── Loading ─── */
   if (loading) {
     return (
@@ -410,7 +413,7 @@ export default function TaskDetailPage() {
                   className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all"
                 >
                   <option value="">Unassigned</option>
-                  {(project?.members || []).map(m => {
+                  {assignableMembers.map(m => {
                     const u = m.user;
                     return <option key={u._id || u} value={u._id || u}>{u.name || u}</option>;
                   })}

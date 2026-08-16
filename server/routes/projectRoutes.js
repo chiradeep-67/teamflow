@@ -1,8 +1,11 @@
 const express = require('express');
 const router  = express.Router();
 const Project = require('../models/Project');
+const User    = require('../models/User');
 const { protect } = require('../middleware/auth');
 const { requireRole, requireProjectMember, requireProjectRole } = require('../middleware/checkRole');
+
+const MEMBER_USER_FIELDS = 'name email avatar title systemRole';
 
 router.use(protect);
 
@@ -15,7 +18,7 @@ router.get('/', async (req, res) => {
       : { organizationId: req.user.organizationId, 'members.user': req.user._id };
 
     const projects = await Project.find(query)
-      .populate('members.user', 'name email avatar title');
+      .populate('members.user', MEMBER_USER_FIELDS);
     res.json({ success: true, projects });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -82,6 +85,20 @@ router.delete('/:id', requireProjectRole('project_manager'), async (req, res) =>
 router.post('/:id/members', requireProjectRole('project_manager'), async (req, res) => {
   try {
     const { userId, projectRole } = req.body;
+    const targetUser = await User.findOne({
+      _id:            userId,
+      organizationId: req.user.organizationId,
+    });
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    if (targetUser.systemRole === 'admin') {
+      return res.status(400).json({
+        success: false,
+        message: 'Workspace admins cannot be assigned to projects',
+      });
+    }
+
     const project = await Project.findOne({
       _id:            req.params.id,
       organizationId: req.user.organizationId,
@@ -97,7 +114,7 @@ router.post('/:id/members', requireProjectRole('project_manager'), async (req, r
     await project.save();
 
     const populated = await Project.findById(project._id)
-      .populate('members.user', 'name email avatar title');
+      .populate('members.user', MEMBER_USER_FIELDS);
     res.json({ success: true, project: populated });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -119,7 +136,7 @@ router.delete('/:id/members/:userId', requireProjectRole('project_manager'), asy
     await project.save();
 
     const populated = await Project.findById(project._id)
-      .populate('members.user', 'name email avatar title');
+      .populate('members.user', MEMBER_USER_FIELDS);
     res.json({ success: true, project: populated });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

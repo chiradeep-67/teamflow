@@ -4,9 +4,35 @@ const { protect }  = require('../middleware/auth');
 const { requireProjectMember, requireProjectRole } = require('../middleware/checkRole');
 const Task         = require('../models/Task');
 const Project      = require('../models/Project');
+const User         = require('../models/User');
 const Notification = require('../models/Notification');
 
 router.use(protect);
+
+/** Reject workspace admins and non-project members as task assignees. */
+async function validateTaskAssignee(projectId, assigneeId, organizationId) {
+  if (!assigneeId) return null;
+
+  const assignee = await User.findOne({ _id: assigneeId, organizationId });
+  if (!assignee) {
+    return { status: 404, message: 'Assignee not found' };
+  }
+  if (assignee.systemRole === 'admin') {
+    return { status: 400, message: 'Workspace admins cannot be assigned to tasks' };
+  }
+
+  const project = await Project.findOne({ _id: projectId, organizationId });
+  if (!project) {
+    return { status: 404, message: 'Project not found' };
+  }
+
+  const isMember = project.members.some(m => m.user.toString() === assigneeId.toString());
+  if (!isMember) {
+    return { status: 400, message: 'Assignee must be a member of this project' };
+  }
+
+  return null;
+}
 
 /* ── GET /api/projects/:id/tasks ─────────────────────────────────────────── */
 router.get('/', requireProjectMember, async (req, res) => {
@@ -48,6 +74,14 @@ router.post('/', requireProjectRole('project_manager', 'team_lead'), async (req,
     const orgId = req.project?.organizationId || req.user.organizationId;
     const body = { ...req.body };
     if (!body.assignedTo) delete body.assignedTo;
+
+    if (body.assignedTo) {
+      const assignErr = await validateTaskAssignee(req.params.id, body.assignedTo, orgId);
+      if (assignErr) {
+        return res.status(assignErr.status).json({ success: false, message: assignErr.message });
+      }
+    }
+
     const task = await Task.create({
       ...body,
       project:        req.params.id,
@@ -100,6 +134,14 @@ router.put('/:taskId', requireProjectMember, async (req, res) => {
       if (key in req.body) updateBody[key] = req.body[key];
     }
     if (!updateBody.assignedTo) delete updateBody.assignedTo;
+
+    if (updateBody.assignedTo) {
+      const assignErr = await validateTaskAssignee(req.params.id, updateBody.assignedTo, orgId);
+      if (assignErr) {
+        return res.status(assignErr.status).json({ success: false, message: assignErr.message });
+      }
+    }
+
     const updated = await Task.findByIdAndUpdate(req.params.taskId, updateBody, { new: true });
 
     const taskLink = `/projects/${req.params.id}/tasks/${updated._id}`;

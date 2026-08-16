@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft, Plus, Flame, AlertCircle, Circle,
-  Clock, Search, X, Calendar, Loader2, Users, Trash2, ExternalLink,
+  Clock, Search, X, Calendar, Loader2, Users, Trash2, ExternalLink, MoreHorizontal,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { RoleBadge } from '../components/common/RoleBadge';
@@ -10,6 +10,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { projectsAPI, tasksAPI, usersAPI } from '../services/api';
 import { cn } from '../utils/cn';
+import { getAssignableProjectMembers, isAssignableUser } from '../utils/permissions';
 
 /* ─── Config ─── */
 const PRIORITY_MAP = {
@@ -38,6 +39,34 @@ const COLS_CONFIG = [
 ];
 
 const STATUS_LABEL = { todo: 'To Do', in_progress: 'In Progress', in_review: 'In Review', done: 'Done', cancelled: 'Cancelled' };
+
+/* ─── Touch / small-screen detection ───
+ * HTML5 drag-and-drop (draggable + onDragStart/onDragOver/onDrop) never fires
+ * from touch input, so on phones/tablets we fall back to an explicit
+ * "Move to" control on the card instead of relying on drag gestures.
+ * NOTE: Chrome DevTools device emulation still dispatches mouse events, so
+ * drag will *appear* to work there even though it doesn't on a real device —
+ * this must be tested on an actual phone/tablet.
+ */
+function useIsTouchOrSmallScreen() {
+  const getValue = () => {
+    if (typeof window === 'undefined') return false;
+    const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const isSmallScreen = window.innerWidth < 1024; // matches the sidebar's lg (desktop rail) breakpoint
+    return hasTouch || isSmallScreen;
+  };
+  const [value, setValue] = useState(getValue);
+  useEffect(() => {
+    const onResize = () => setValue(getValue());
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onResize);
+    };
+  }, []);
+  return value;
+}
 
 /* ─── Avatar ─── */
 function UserAvatar({ user, size = 'sm' }) {
@@ -75,7 +104,9 @@ function ManageTeamModal({ project, onClose, onProjectUpdate, isAdminView }) {
       .finally(() => setLoadingUsers(false));
   }, []);
 
-  const available = allUsers.filter(u => !memberIds.has(u._id || u.id));
+  const available = allUsers.filter(u =>
+    !memberIds.has(u._id || u.id) && isAssignableUser(u)
+  );
 
   const handleAdd = async () => {
     if (!selectedUser) return;
@@ -115,7 +146,7 @@ function ManageTeamModal({ project, onClose, onProjectUpdate, isAdminView }) {
       <div className="relative w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/70 dark:border-gray-700 animate-slide-up overflow-hidden max-h-[85vh] flex flex-col">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
           <div className="flex items-center gap-2">
             <Users size={15} className="text-indigo-500" />
             <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Manage Team</h2>
@@ -126,7 +157,7 @@ function ManageTeamModal({ project, onClose, onProjectUpdate, isAdminView }) {
           </button>
         </div>
 
-        <div className="overflow-y-auto p-6 space-y-5 flex-1">
+        <div className="overflow-y-auto p-4 sm:p-6 space-y-5 flex-1">
           {error && (
             <div className="p-3 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200/70 dark:border-red-500/20 text-red-600 dark:text-red-400 text-xs">
               {error}
@@ -224,7 +255,7 @@ function ManageTeamModal({ project, onClose, onProjectUpdate, isAdminView }) {
 
 /* ─── Task Create / Edit Modal ─── */
 function TaskModal({ project, task, onClose, onSave, saving, canAssign }) {
-  const members = project?.members ?? [];
+  const assignableMembers = getAssignableProjectMembers(project);
 
   const [form, setForm] = useState({
     title:         task?.title         ?? '',
@@ -250,11 +281,11 @@ function TaskModal({ project, task, onClose, onSave, saving, canAssign }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
       <div className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-lg bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/70 dark:border-gray-700 animate-slide-up overflow-hidden max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
           <h2 className="text-sm font-semibold text-gray-900 dark:text-white">{task?._id ? 'Edit Task' : 'Create Task'}</h2>
           <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"><X size={15} /></button>
         </div>
-        <form onSubmit={handleSubmit} className="overflow-y-auto p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="overflow-y-auto p-4 sm:p-6 space-y-4">
           {error && <p className="text-xs text-red-500">{error}</p>}
 
           <Input label="Title *" placeholder="e.g. Set up payment gateway" value={form.title}
@@ -291,7 +322,7 @@ function TaskModal({ project, task, onClose, onSave, saving, canAssign }) {
                 <select value={form.assignedTo} onChange={e => setForm(f => ({ ...f, assignedTo: e.target.value }))}
                   className="h-10 rounded-lg text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all">
                   <option value="">Unassigned</option>
-                  {members.map(m => {
+                  {assignableMembers.map(m => {
                     const u = m.user;
                     return u ? <option key={u._id} value={u._id}>{u.name}</option> : null;
                   })}
@@ -328,7 +359,7 @@ function TaskModal({ project, task, onClose, onSave, saving, canAssign }) {
 }
 
 /* ─── Task Card ─── */
-function TaskCard({ task, onDragStart, onOpenTask, canEdit, canDrag }) {
+function TaskCard({ task, onDragStart, onOpenTask, canEdit, canDrag, showMoveMenu, onMoveTask }) {
   const P = PRIORITY_MAP[task.priority] ?? PRIORITY_MAP.medium;
   const tagCls = task.tags?.[0] ? (TAG_COLORS[task.tags[0]] ?? 'bg-gray-100 dark:bg-gray-700 text-gray-500') : null;
 
@@ -366,12 +397,28 @@ function TaskCard({ task, onDragStart, onOpenTask, canEdit, canDrag }) {
           <span>{task.estimatedTime}</span>
         </div>
       )}
+      {showMoveMenu && (
+        // Touch/small-screen fallback for HTML5 drag-and-drop, which never
+        // fires from a finger. Reuses the same status-update call as the
+        // TaskPanel status <select>.
+        <div className="mt-2.5 pt-2.5 border-t border-gray-100 dark:border-gray-700/50" onClick={e => e.stopPropagation()}>
+          <select
+            value={task.status}
+            onChange={e => onMoveTask(task._id, e.target.value)}
+            onClick={e => e.stopPropagation()}
+            aria-label="Move task to another column"
+            className="w-full h-7 rounded-md text-[11px] font-medium bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 px-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+          >
+            {COLS_CONFIG.map(c => <option key={c.id} value={c.id}>Move to: {c.label}</option>)}
+          </select>
+        </div>
+      )}
     </div>
   );
 }
 
 /* ─── Kanban Column ─── */
-function KanbanCol({ col, tasks, onDragStart, onDrop, onOpenTask, onAddTask, canCreate, canDrag }) {
+function KanbanCol({ col, tasks, onDragStart, onDrop, onOpenTask, onAddTask, canCreate, canDrag, showMoveMenu, onMoveTask }) {
   const [isDragOver, setIsDragOver] = useState(false);
 
   return (
@@ -399,7 +446,16 @@ function KanbanCol({ col, tasks, onDragStart, onDrop, onOpenTask, onAddTask, can
         )}
       >
         {tasks.map(task => (
-          <TaskCard key={task._id} task={task} onDragStart={onDragStart} onOpenTask={onOpenTask} canEdit={canCreate} canDrag={canDrag} />
+          <TaskCard
+            key={task._id}
+            task={task}
+            onDragStart={onDragStart}
+            onOpenTask={onOpenTask}
+            canEdit={canCreate}
+            canDrag={canDrag}
+            showMoveMenu={showMoveMenu}
+            onMoveTask={onMoveTask}
+          />
         ))}
         {tasks.length === 0 && !isDragOver && (
           <div className="flex items-center justify-center flex-1 text-xs text-gray-300 dark:text-gray-700">
@@ -445,7 +501,7 @@ function TaskPanel({ task, projectId, onClose, onEdit, onUpdate, canEdit, curren
     <div className="fixed inset-0 z-40 flex justify-end">
       <div className="absolute inset-0 bg-black/30 dark:bg-black/50" onClick={onClose} />
       <div className="relative w-full max-w-[440px] bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 h-full overflow-y-auto shadow-2xl flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800 sticky top-0 bg-white dark:bg-gray-900 z-10">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 dark:border-gray-800 sticky top-0 bg-white dark:bg-gray-900 z-10">
           <div className="flex items-center gap-2">
             <P.icon size={14} className={P.cls} />
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{P.label} priority</span>
@@ -463,7 +519,7 @@ function TaskPanel({ task, projectId, onClose, onEdit, onUpdate, canEdit, curren
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
           <div>
             <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-2 leading-snug">{task.title}</h2>
             {task.description && <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{task.description}</p>}
@@ -570,7 +626,9 @@ export default function ProjectDetailPage() {
   const [saving, setSaving]           = useState(false);
   const [search, setSearch]           = useState('');
   const [manageTeam, setManageTeam]   = useState(false);
+  const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
   const dragging = useRef({ taskId: null, fromCol: null });
+  const isTouchOrSmall = useIsTouchOrSmallScreen();
 
   useEffect(() => {
     let cancelled = false;
@@ -605,7 +663,7 @@ export default function ProjectDetailPage() {
 
   if (notFound || !project) {
     return (
-      <div className="p-6 text-center">
+      <div className="p-4 sm:p-6 text-center">
         <p className="text-gray-500">Project not found or you don&apos;t have access.</p>
         <Link to="/board" className="text-indigo-600 text-sm hover:underline mt-2 inline-block">← Back to board</Link>
       </div>
@@ -616,7 +674,7 @@ export default function ProjectDetailPage() {
 
   if (!projectRole) {
     return (
-      <div className="p-6 text-center">
+      <div className="p-4 sm:p-6 text-center">
         <p className="text-gray-500">You don&apos;t have access to this project.</p>
         <Link to="/board" className="text-indigo-600 text-sm hover:underline mt-2 inline-block">← Back to board</Link>
       </div>
@@ -629,6 +687,10 @@ export default function ProjectDetailPage() {
   const canDrag       = ['admin', 'project_manager', 'team_lead'].includes(projectRole);
   const canAssign     = ['admin', 'project_manager', 'team_lead'].includes(projectRole);
   const canManageTeam = ['admin', 'project_manager'].includes(projectRole);
+  // HTML5 drag-and-drop never fires on touch — disable it there and show an
+  // explicit "Move to" control on the card instead. Desktop D&D is unchanged.
+  const dragEnabled   = canDrag && !isTouchOrSmall;
+  const showMoveMenu  = canDrag && isTouchOrSmall;
   const canEditTask   = (task) =>
     ['admin', 'project_manager', 'team_lead'].includes(projectRole) ||
     (task?.assignedTo?._id || task?.assignedTo) === user?.id;
@@ -701,9 +763,9 @@ export default function ProjectDetailPage() {
     : visibleTasks;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-0px)] lg:h-screen overflow-hidden">
+    <div className="flex flex-col h-[100dvh] lg:h-screen overflow-hidden">
       {/* Project header */}
-      <div className="shrink-0 px-6 py-4 bg-white dark:bg-gray-900 border-b border-gray-200/70 dark:border-gray-800">
+      <div className="shrink-0 px-4 sm:px-6 py-4 bg-white dark:bg-gray-900 border-b border-gray-200/70 dark:border-gray-800">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <Link to="/board" className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors shrink-0">
@@ -735,7 +797,7 @@ export default function ProjectDetailPage() {
             {canManageTeam && (
               <button
                 onClick={() => setManageTeam(true)}
-                className="hidden sm:flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                className="hidden md:flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
                 <Users size={12} />
                 Team
@@ -746,6 +808,15 @@ export default function ProjectDetailPage() {
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tasks…"
                 className="h-8 pl-8 pr-3 rounded-lg text-xs bg-gray-100 dark:bg-gray-800 border border-transparent text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:border-indigo-300 dark:focus:border-indigo-500/50 w-40 transition-all" />
             </div>
+            {/* Mobile/tablet: search + team collapse into this overflow toggle instead of disappearing */}
+            <button
+              onClick={() => setMobileToolsOpen(o => !o)}
+              className="md:hidden w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              aria-label="More project tools"
+              aria-expanded={mobileToolsOpen}
+            >
+              <MoreHorizontal size={15} />
+            </button>
             {canCreate && (
               <Button size="sm" leftIcon={<Plus size={13} />} onClick={() => setNewTaskCol('todo')}>
                 Add task
@@ -753,6 +824,26 @@ export default function ProjectDetailPage() {
             )}
           </div>
         </div>
+
+        {mobileToolsOpen && (
+          <div className="md:hidden mt-3 flex flex-col gap-2 animate-fade-in">
+            <div className="relative">
+              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tasks…"
+                className="w-full h-9 pl-8 pr-3 rounded-lg text-xs bg-gray-100 dark:bg-gray-800 border border-transparent text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:border-indigo-300 dark:focus:border-indigo-500/50 transition-all" />
+            </div>
+            {canManageTeam && (
+              <button
+                onClick={() => { setManageTeam(true); setMobileToolsOpen(false); }}
+                className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                <Users size={12} />
+                Manage Team
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="mt-3 h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
           <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: project.color || '#6366f1' }} />
         </div>
@@ -760,7 +851,7 @@ export default function ProjectDetailPage() {
 
       {/* Kanban board */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden">
-        <div className="flex gap-4 p-6 min-w-max h-full items-start">
+        <div className="flex gap-4 p-4 sm:p-6 min-w-max h-full items-start">
           {COLS_CONFIG.map(col => (
             <KanbanCol
               key={col.id}
@@ -771,7 +862,9 @@ export default function ProjectDetailPage() {
               onOpenTask={setActiveTask}
               onAddTask={(colId) => setNewTaskCol(colId)}
               canCreate={canCreate}
-              canDrag={canDrag}
+              canDrag={dragEnabled}
+              showMoveMenu={showMoveMenu}
+              onMoveTask={(taskId, status) => handleUpdate(taskId, { status })}
             />
           ))}
         </div>
