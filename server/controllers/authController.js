@@ -60,17 +60,17 @@ const register = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invite link is invalid or has expired' });
     }
 
-    if (invite.email.toLowerCase() !== email.toLowerCase()) {
+    if (invite.email.toLowerCase().trim() !== email.toLowerCase().trim()) {
       return res.status(400).json({ success: false, message: 'Email does not match the invite' });
     }
 
-    if (await User.findOne({ email: email.toLowerCase() })) {
+    if (await User.findOne({ email: email.toLowerCase().trim() })) {
       return res.status(400).json({ success: false, message: 'Email already registered' });
     }
 
     const user = await User.create({
       name,
-      email,
+      email: email.toLowerCase().trim(),
       password,
       phone:          phone || '',
       systemRole:     invite.systemRole,
