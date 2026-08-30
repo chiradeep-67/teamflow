@@ -9,17 +9,17 @@
     "dev": "nodemon server.js"
   },
   "dependencies": {
-    "bcryptjs": "^2.4.3", //for hashing passwords
-    "cors": "^2.8.5", //telling which website can access our api's
-    "dotenv": "^16.4.5", //for environment variables
-    "express": "^4.19.2", //for building the API
-    "express-rate-limit": "^8.5.2", //for rate limiting
+    "bcryptjs": "^2.4.3", 
+    "cors": "^2.8.5", 
+    "dotenv": "^16.4.5", 
+    "express": "^4.19.2", 
+    "express-rate-limit": "^8.5.2", 
     "express-validator": "^7.1.0",
-    "helmet": "^8.2.0", //for security
-    "jsonwebtoken": "^9.0.2", //for JSON Web Tokens
-    "mongoose": "^8.4.1", //for MongoDB
-    "morgan": "^1.10.0", //for logging
-    "nodemailer": "^9.0.0" //for sending emails
+    "helmet": "^8.2.0", 
+    "jsonwebtoken": "^9.0.2", 
+    "mongoose": "^8.4.1", 
+    "morgan": "^1.10.0", 
+    "nodemailer": "^9.0.0" 
   },
   "devDependencies": {
     "nodemon": "^3.1.3"
