@@ -240,11 +240,7 @@ JSON response → React re-render
 
 ---
 
-## Learning Resources
 
-This repo includes a `learning-vault/` folder with a structured 9-day study plan mapped to this codebase. See `learning-vault/README.md` to start.
-
----
 
 ## Author
 

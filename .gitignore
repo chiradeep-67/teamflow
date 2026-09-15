@@ -23,6 +23,11 @@ logs/
 npm-debug.log*
 yarn-debug.log*
 
+# Resumes / personal docs — not part of the app
+resumes/
+*.docx
+~$*
+
 # OS
 .DS_Store
 Thumbs.db
