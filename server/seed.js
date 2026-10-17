@@ -4,7 +4,7 @@
  * Usage:
  *   node seed.js "Acme Corp" "admin@acme.com" "SecurePass123"
  *
- * The admin is forced to change their password on first login.
+ 
  * Run from the server/ directory (or anywhere — dotenv resolves .env from __dirname).
  */
 
