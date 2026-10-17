@@ -220,8 +220,8 @@ function ProjectReport({ project, tasks }) {
 
   /* Done tasks log */
   const donelog = tasks
-    .filter(t => t.status === 'done')
-    .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+  .filter(t => t.status === 'done')
+  .sort((a, b) => new Date(b.completedAt || 0) - new Date(a.completedAt || 0));
 
   const isPastDeadline = deadline && deadline < today;
 
@@ -459,7 +459,7 @@ function ProjectReport({ project, tasks }) {
                           : <span className="text-gray-400">—</span>}
                       </td>
                       <td className="px-4 py-3 text-gray-500 dark:text-gray-400">
-                        {task.updatedAt ? new Date(task.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                      {task.completedAt ? new Date(task.completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                       </td>
                     </tr>
                   );
