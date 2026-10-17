@@ -87,6 +87,7 @@ router.post('/', requireProjectRole('project_manager', 'team_lead'), async (req,
       project:        req.params.id,
       organizationId: orgId,
       createdBy:      req.user._id,
+      completedAt:    body.status === 'done' ? new Date() : null,
     });
 
     // Notify the assignee when a task is created with an assignment
@@ -140,6 +141,10 @@ router.put('/:taskId', requireProjectMember, async (req, res) => {
       if (assignErr) {
         return res.status(assignErr.status).json({ success: false, message: assignErr.message });
       }
+    }
+
+    if (updateBody.status && updateBody.status !== prevStatus) {
+      updateBody.completedAt = updateBody.status === 'done' ? new Date() : null;
     }
 
     const updated = await Task.findByIdAndUpdate(req.params.taskId, updateBody, { new: true });

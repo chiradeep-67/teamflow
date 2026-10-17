@@ -24,6 +24,7 @@ const TaskSchema = new mongoose.Schema({
   createdBy:  { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 
   dueDate:       { type: Date },
+  completedAt: { type: Date, default: null },
   estimatedTime: { type: String, default: '' },
   comments: [CommentSchema],
 }, { timestamps: true });
