@@ -31,6 +31,15 @@ const authLimiter = rateLimit({
   message: { success: false, message: 'Too many requests — please try again in 15 minutes.' },
 });
 
+/* ─── AI rate limiting ─── */
+const aiLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many AI requests — please wait a few minutes.' },
+});
+
 /* ─── Middleware ─── */
 const isAllowedOrigin = (origin) => {
   if (!origin) return true;
@@ -70,6 +79,7 @@ app.use('/api/projects',      require('./routes/projectRoutes')); /* tasks neste
 app.use('/api/workspace',     require('./routes/workspaceRoutes'));
 app.use('/api/invites',       require('./routes/inviteRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
+app.use('/api/ai', aiLimiter, require('./routes/aiRoutes'));
 
 /* ─── Health check ─── */
 app.get('/api/health', (req, res) => res.json({ status: 'ok', app: 'TeamFlow API' }));
@@ -99,3 +109,4 @@ if (require.main === module) {
 }
 
 module.exports = app;
+
