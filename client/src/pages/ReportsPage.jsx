@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import {
   CheckCircle, Clock, Users, AlertTriangle, TrendingUp,
   Loader2, Calendar, BarChart2, MessageSquare, Copy, Check,
-  ChevronDown, FolderKanban, Flame, AlertCircle, Circle,
+  ChevronDown, FolderKanban, Flame, AlertCircle, Circle,Sparkles,
 } from 'lucide-react';
-import { projectsAPI, tasksAPI } from '../services/api';
+import { projectsAPI, tasksAPI, aiAPI } from '../services/api';
 import { cn } from '../utils/cn';
 
 /* ─── Helpers ─────────────────────────────────────────────────────────────── */
@@ -473,6 +473,86 @@ function ProjectReport({ project, tasks }) {
   );
 }
 
+/* ─── AI Insights panel ──────────────────────────────────────────────────── */
+const SUGGESTED_QUESTIONS = [
+  'Which project has the most overdue tasks?',
+  'What needs attention first?',
+  'Who completed the most tasks this month?',
+  'Who completed the most tasks on time this month?',
+  'Give me a summary of every project.',
+];
+
+function AIInsightsPanel() {
+  const [question, setQuestion] = useState('');
+  const [answer, setAnswer]     = useState('');
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState('');
+
+  const ask = async (text) => {
+    const q = (text ?? question).trim();
+    if (!q || loading) return;
+    setQuestion(q);
+    setLoading(true);
+    setError('');
+    setAnswer('');
+    try {
+      const { data } = await aiAPI.analyze(q);
+      setAnswer((data.answer || '').replace(/\*\*/g, ''));
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not get AI insights. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/70 dark:border-gray-800 p-5">
+      <div className="flex items-center gap-2 mb-1">
+        <Sparkles size={14} className="text-indigo-500" />
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">AI Insights</h3>
+      </div>
+      <p className="text-xs text-gray-400 dark:text-gray-600 mb-4">
+        Ask about overdue work, team performance or what needs attention. Covers all projects you belong to.
+      </p>
+
+      <div className="flex flex-wrap gap-2 mb-4">
+        {SUGGESTED_QUESTIONS.map(q => (
+          <button key={q} type="button" onClick={() => ask(q)} disabled={loading}
+            className="text-[11px] px-2.5 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 transition-colors">
+            {q}
+          </button>
+        ))}
+      </div>
+
+      <form onSubmit={e => { e.preventDefault(); ask(); }} className="flex gap-2">
+        <input value={question} onChange={e => setQuestion(e.target.value)} maxLength={500}
+          placeholder="Ask a question about your projects…"
+          className="flex-1 h-9 px-3 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all" />
+        <button type="submit" disabled={loading || !question.trim()}
+          className="h-9 px-4 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+          Ask
+        </button>
+      </form>
+
+      {loading && (
+        <div className="flex items-center gap-2 mt-4 text-xs text-gray-500 dark:text-gray-400">
+          <Loader2 size={13} className="animate-spin text-indigo-500" /> Analyzing your tasks…
+        </div>
+      )}
+      {error && (
+        <div className="mt-4 p-3 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200/70 dark:border-red-500/20 text-xs text-red-600 dark:text-red-400">
+          {error}
+        </div>
+      )}
+      {answer && (
+        <div className="mt-4 p-4 rounded-lg bg-indigo-50/60 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 text-sm text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
+          {answer}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── Main Reports Page ──────────────────────────────────────────────────── */
 export default function ReportsPage() {
   const [projects,     setProjects]     = useState([]);
@@ -512,7 +592,7 @@ export default function ReportsPage() {
   const allTasks  = Object.values(tasksByProj).flat();
   const totalDone = allTasks.filter(t => t.status === 'done').length;
   const totalPct  = allTasks.length ? Math.round((totalDone / allTasks.length) * 100) : 0;
-  const overdue   = allTasks.filter(t => t.status !== 'done' && t.dueDate && new Date(t.dueDate) < new Date()).length;
+  const overdue   = allTasks.filter(t => !['done', 'cancelled'].includes(t.status) && t.dueDate && new Date(t.dueDate) < new Date()).length;
 
   if (loading) {
     return (
@@ -572,6 +652,9 @@ export default function ReportsPage() {
           ))}
         </div>
       )}
+
+      {/* AI Insights panel */}
+      <AIInsightsPanel /> 
 
       {/* Per-project detailed report */}
       {projects.length === 0 ? (

@@ -93,4 +93,9 @@ export const notificationsAPI = {
   markAll: ()   => api.patch('/notifications/read-all'),
 };
 
+/* ─── AI ─── */
+export const aiAPI = {
+  analyze: (question) => api.post('/ai/analyze-report', { question }),
+};
+
 export default api;
