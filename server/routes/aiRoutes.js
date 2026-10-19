@@ -8,7 +8,7 @@ const Task    = require('../models/Task');
 const MAX_TASKS = 2000;
 
 router.use(protect);
-
+signal: AbortSignal.timeout(240000)
 router.post('/analyze-report', requireRole('project_manager', 'team_lead'), async (req, res) => {
   try {
     const question = typeof req.body.question === 'string' ? req.body.question.trim() : '';
@@ -53,7 +53,7 @@ router.post('/analyze-report', requireRole('project_manager', 'team_lead'), asyn
         'x-api-key': process.env.AI_SERVICE_KEY,
       },
       body: JSON.stringify({ question, tasks: payload }),
-      signal: AbortSignal.timeout(30000),
+      signal: AbortSignal.timeout(240000),
     });
 
     if (!aiRes.ok) {
