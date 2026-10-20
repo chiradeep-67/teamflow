@@ -51,24 +51,48 @@ router.post('/analyze-report', requireRole('project_manager', 'team_lead'), asyn
       completed_at: t.completedAt ? t.completedAt.toISOString() : null,
     }));
 
-    const aiRes = await fetch(`${process.env.AI_SERVICE_URL}/analyze`, {
+    const aiRes = await fetch(`${process.env.AI_SERVICE_URL}/jobs`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': process.env.AI_SERVICE_KEY,
       },
-      body: JSON.stringify({ question, history, tasks: payload }),
-      signal: AbortSignal.timeout(300000),
+      body: JSON.stringify({ question, history, tasks: payload, user_id: req.user._id.toString() }),
+      signal: AbortSignal.timeout(90000),
     });
 
     if (!aiRes.ok) {
-      return res.status(502).json({ success: false, message: 'The AI service could not answer right now' });
+      return res.status(502).json({ success: false, message: 'The AI service could not start the analysis' });
     }
 
     const data = await aiRes.json();
-    res.json({ success: true, answer: data.answer });
+    res.json({ success: true, jobId: data.job_id });
   } catch (err) {
     console.error('AI route error:', err.message);
+    res.status(503).json({ success: false, message: 'AI service unavailable' });
+  }
+});
+
+router.get('/analyze-report/:jobId', requireRole('project_manager', 'team_lead'), async (req, res) => {
+  try {
+    if (!/^[a-f0-9]{32}$/.test(req.params.jobId)) {
+      return res.status(400).json({ success: false, message: 'Invalid job id' });
+    }
+    const url = `${process.env.AI_SERVICE_URL}/jobs/${req.params.jobId}?user_id=${encodeURIComponent(req.user._id.toString())}`;
+    const aiRes = await fetch(url, {
+      headers: { 'x-api-key': process.env.AI_SERVICE_KEY },
+      signal: AbortSignal.timeout(90000),
+    });
+    if (aiRes.status === 404) {
+      return res.status(404).json({ success: false, message: 'This analysis expired. Please ask again.' });
+    }
+    if (!aiRes.ok) {
+      return res.status(502).json({ success: false, message: 'The AI service could not answer right now' });
+    }
+    const data = await aiRes.json();
+    res.json({ success: true, status: data.status, answer: data.answer });
+  } catch (err) {
+    console.error('AI status error:', err.message);
     res.status(503).json({ success: false, message: 'AI service unavailable' });
   }
 });

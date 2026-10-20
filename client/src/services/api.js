@@ -96,6 +96,7 @@ export const notificationsAPI = {
 /* ─── AI ─── */
 export const aiAPI = {
   analyze: (question, history = []) => api.post('/ai/analyze-report', { question, history }),
+  status:  (jobId) => api.get(`/ai/analyze-report/${jobId}`),
 };
 
 export default api;

@@ -481,6 +481,18 @@ const SUGGESTED_QUESTIONS = [
   'Give me a summary of every project.',
 ];
 
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function waitForAnswer(jobId) {
+  for (let i = 0; i < 400; i++) {
+    await sleep(3000);
+    const { data } = await aiAPI.status(jobId);
+    if (data.status === 'done') return data.answer || '';
+    if (data.status === 'error') throw new Error('The AI could not answer that. Please try again.');
+  }
+  throw new Error('This is taking too long. Please try again.');
+}
+
 /* ─── AI Insights panel ──────────────────────────────────────────────────── */
 function AIInsightsPanel() {
   const [question, setQuestion] = useState('');
@@ -498,11 +510,12 @@ function AIInsightsPanel() {
     setMessages(m => [...m, { role: 'user', text: q }]);
     try {
       const { data } = await aiAPI.analyze(q, history);
-      setMessages(m => [...m, { role: 'model', text: (data.answer || '').replace(/\*\*/g, '') }]);
+      const answer = data.answer ?? await waitForAnswer(data.jobId);
+      setMessages(m => [...m, { role: 'model', text: answer.replace(/\*\*/g, '') }]);
     } catch (err) {
       setMessages(m => m.slice(0, -1));
-      setError(err.response?.data?.message || 'Could not get AI insights. Please try again.');
-    } finally {
+      setError(err.response?.data?.message || err.message || 'Could not get AI insights. Please try again.');
+    }finally {
       setLoading(false);
     }
   };

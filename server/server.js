@@ -79,7 +79,8 @@ app.use('/api/projects',      require('./routes/projectRoutes')); /* tasks neste
 app.use('/api/workspace',     require('./routes/workspaceRoutes'));
 app.use('/api/invites',       require('./routes/inviteRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
-app.use('/api/ai', aiLimiter, require('./routes/aiRoutes'));
+app.post('/api/ai/analyze-report', aiLimiter);
+app.use('/api/ai', require('./routes/aiRoutes'));
 
 /* ─── Health check ─── */
 app.get('/api/health', (req, res) => res.json({ status: 'ok', app: 'TeamFlow API' }));
