@@ -473,6 +473,14 @@ function ProjectReport({ project, tasks }) {
   );
 }
 
+const SUGGESTED_QUESTIONS = [
+  'Which project has the most overdue tasks?',
+  'What needs attention first?',
+  'Who completed the most tasks this month?',
+  'Who completed the most tasks on time this month?',
+  'Give me a summary of every project.',
+];
+
 /* ─── AI Insights panel ──────────────────────────────────────────────────── */
 function AIInsightsPanel() {
   const [question, setQuestion] = useState('');
