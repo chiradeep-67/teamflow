@@ -15,6 +15,11 @@ router.post('/analyze-report', requireRole('project_manager', 'team_lead'), asyn
     if (!question || question.length > 500) {
       return res.status(400).json({ success: false, message: 'Question must be 1 to 500 characters' });
     }
+    const rawHistory = Array.isArray(req.body.history) ? req.body.history : [];
+    const history = rawHistory
+    .slice(-10)
+    .filter(t => t && ['user', 'model'].includes(t.role) && typeof t.text === 'string')
+    .map(t => ({ role: t.role, text: t.text.slice(0, 4000) }));
 
     const projectFilter = { organizationId: req.user.organizationId };
     if (req.user.systemRole !== 'admin') {
@@ -52,8 +57,8 @@ router.post('/analyze-report', requireRole('project_manager', 'team_lead'), asyn
         'Content-Type': 'application/json',
         'x-api-key': process.env.AI_SERVICE_KEY,
       },
-      body: JSON.stringify({ question, tasks: payload }),
-      signal: AbortSignal.timeout(240000),
+      body: JSON.stringify({ question, history, tasks: payload }),
+      signal: AbortSignal.timeout(300000),
     });
 
     if (!aiRes.ok) {

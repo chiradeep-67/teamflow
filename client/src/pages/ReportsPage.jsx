@@ -474,31 +474,25 @@ function ProjectReport({ project, tasks }) {
 }
 
 /* ─── AI Insights panel ──────────────────────────────────────────────────── */
-const SUGGESTED_QUESTIONS = [
-  'Which project has the most overdue tasks?',
-  'What needs attention first?',
-  'Who completed the most tasks this month?',
-  'Who completed the most tasks on time this month?',
-  'Give me a summary of every project.',
-];
-
 function AIInsightsPanel() {
   const [question, setQuestion] = useState('');
-  const [answer, setAnswer]     = useState('');
+  const [messages, setMessages] = useState([]);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
 
   const ask = async (text) => {
     const q = (text ?? question).trim();
     if (!q || loading) return;
-    setQuestion(q);
+    const history = messages.slice(-10);
+    setQuestion('');
     setLoading(true);
     setError('');
-    setAnswer('');
+    setMessages(m => [...m, { role: 'user', text: q }]);
     try {
-      const { data } = await aiAPI.analyze(q);
-      setAnswer((data.answer || '').replace(/\*\*/g, ''));
+      const { data } = await aiAPI.analyze(q, history);
+      setMessages(m => [...m, { role: 'model', text: (data.answer || '').replace(/\*\*/g, '') }]);
     } catch (err) {
+      setMessages(m => m.slice(0, -1));
       setError(err.response?.data?.message || 'Could not get AI insights. Please try again.');
     } finally {
       setLoading(false);
@@ -512,7 +506,7 @@ function AIInsightsPanel() {
         <h3 className="text-sm font-semibold text-gray-900 dark:text-white">AI Insights</h3>
       </div>
       <p className="text-xs text-gray-400 dark:text-gray-600 mb-4">
-        Ask about overdue work, team performance or what needs attention. Covers all projects you belong to.
+        Ask about overdue work, team performance or what needs attention, in your own words. It remembers the conversation. Covers all projects you belong to.
       </p>
 
       <div className="flex flex-wrap gap-2 mb-4">
@@ -524,31 +518,45 @@ function AIInsightsPanel() {
         ))}
       </div>
 
+      {messages.length > 0 && (
+        <div className="mb-4">
+          <div className="space-y-3 max-h-96 overflow-y-auto">
+            {messages.map((m, i) => (
+              <div key={i} className={cn('p-3 rounded-lg text-sm leading-relaxed whitespace-pre-wrap',
+                m.role === 'user'
+                  ? 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200'
+                  : 'bg-indigo-50/60 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 text-gray-800 dark:text-gray-200')}>
+                {m.text}
+              </div>
+            ))}
+          </div>
+          <button type="button" onClick={() => { setMessages([]); setError(''); }} disabled={loading}
+            className="mt-2 text-[11px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-50">
+            Clear conversation
+          </button>
+        </div>
+      )}
+
+      {loading && (
+        <div className="flex items-center gap-2 mb-4 text-xs text-gray-500 dark:text-gray-400">
+          <Loader2 size={13} className="animate-spin text-indigo-500" /> Analyzing your tasks… this can take a few minutes.
+        </div>
+      )}
+      {error && (
+        <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200/70 dark:border-red-500/20 text-xs text-red-600 dark:text-red-400">
+          {error}
+        </div>
+      )}
+
       <form onSubmit={e => { e.preventDefault(); ask(); }} className="flex gap-2">
         <input value={question} onChange={e => setQuestion(e.target.value)} maxLength={500}
-          placeholder="Ask a question about your projects…"
+          placeholder="Ask anything, e.g. who did best this month…"
           className="flex-1 h-9 px-3 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all" />
         <button type="submit" disabled={loading || !question.trim()}
           className="h-9 px-4 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
           Ask
         </button>
       </form>
-
-      {loading && (
-        <div className="flex items-center gap-2 mt-4 text-xs text-gray-500 dark:text-gray-400">
-          <Loader2 size={13} className="animate-spin text-indigo-500" /> Analyzing your tasks…
-        </div>
-      )}
-      {error && (
-        <div className="mt-4 p-3 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200/70 dark:border-red-500/20 text-xs text-red-600 dark:text-red-400">
-          {error}
-        </div>
-      )}
-      {answer && (
-        <div className="mt-4 p-4 rounded-lg bg-indigo-50/60 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 text-sm text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
-          {answer}
-        </div>
-      )}
     </div>
   );
 }
@@ -653,7 +661,7 @@ export default function ReportsPage() {
         </div>
       )}
 
-      {/* AI Insights panel */}
+     
       <AIInsightsPanel /> 
 
       {/* Per-project detailed report */}
